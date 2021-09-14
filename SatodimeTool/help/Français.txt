@@ -1,0 +1,23 @@
+Introduction à SeedKeeper
+=====================
+
+Qu'est-ce que SeedKeeper?
+------------------------------------------
+
+
+Quelqiues définitions
+--------------------------------
+
+* Mnemonic:
+* Masterseed:
+* Authentikey:
+
+Comment utiliser votre SeedKeeper?
+-------------------------------------------------------
+
+
+Comment utiliser votre SeedKeeper avec votre Satochip?
+---------------------------------------------------------------------------------------
+
+
+

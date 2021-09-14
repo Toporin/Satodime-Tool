@@ -1,0 +1,22 @@
+# If you want SatodimeTool to appear in a Linux app launcher ("start menu"), install this by doing:
+# sudo desktop-file-install satodime.desktop
+
+[Desktop Entry]
+Comment=Utility to set up and use a Satodime
+Exec=sh -c "PATH=\"\\$HOME/.local/bin:\\$PATH\"; electrum %u"
+GenericName[en_US]=SatodimeTool
+GenericName=SatodimeTool
+Icon=satochip
+Name[en_US]=satodime.desktop
+Name=SatodimeTool
+Categories=Finance;Network;
+StartupNotify=true
+StartupWMClass=electrum
+Terminal=false
+Type=Application
+#MimeType=x-scheme-handler/bitcoin;
+#Actions=Testnet;
+
+#[Desktop Action Testnet]
+#Exec=sh -c "PATH=\"\\$HOME/.local/bin:\\$PATH\"; electrum --testnet %u"
+#Name=Testnet mode

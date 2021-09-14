@@ -1,0 +1,11 @@
+PyQRCode==1.2.1 
+pypng==0.0.20  
+ecdsa==0.15
+pyscard==1.9.9
+#pysatochip==0.12.3 # todo: add if not local
+#pybitcointools # todo: add if not local
+#certifi # should be in pysatochip => remove in next release
+
+# GUI
+PySimpleGUIQt==0.31.0
+PySide2==5.12.6 #5.14.2
