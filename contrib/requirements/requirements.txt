@@ -1,11 +1,24 @@
 PyQRCode==1.2.1 
 pypng==0.0.20  
 ecdsa==0.15
-pyscard==1.9.9
+pyscard==1.9.9 # from github repo
+#pyscard==2.0.0 # win wheels available on pypi for python 3.8-3.9
+cryptography==3.3.2 # higher versions require Rust 
 #pysatochip==0.12.3 # todo: add if not local
 #pybitcointools # todo: add if not local
 #certifi # should be in pysatochip => remove in next release
 
+# for pybitcointools =>  remove if not local
+requests
+pbkdf2
+pycryptodomex
+#eth-utils
+eth-hash
+#pysha3 # requires Microsoft Visual C++ 14.0
+pycryptodome
+
 # GUI
 PySimpleGUIQt==0.31.0
-PySide2==5.12.6 #5.14.2
+PySide2== 5.12.6
+#PySide2== 5.14.0
+#PySide2== 5.14.2

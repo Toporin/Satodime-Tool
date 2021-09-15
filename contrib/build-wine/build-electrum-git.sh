@@ -1,6 +1,6 @@
 #!/bin/bash
 
-NAME_ROOT=SeedKeeperTool 
+NAME_ROOT=SatodimeTool 
 
 # These settings probably don't need any change
 export WINEPREFIX=/opt/wine64
@@ -39,9 +39,10 @@ $PYTHON -m pip install --upgrade pip
 
 pushd $WINEPREFIX/drive_c/electrum
 # see https://github.com/pypa/pip/issues/2195 -- pip makes a copy of the entire directory
-info "Pip installing SeedKeeperTool. This might take a long time if the project folder is large."
+info "Pip installing SatodimeTool. This might take a long time if the project folder is large."
 $PYTHON -m pip install --no-warn-script-location .
-#$PYTHON -m pip install --no-warn-script-location /pypackage # to install pysatochip package from local folder
+$PYTHON -m pip install --no-warn-script-location /pypackage # to install pysatochip package from local folder
+$PYTHON -m pip install --no-warn-script-location /pypackage2 # to install pybitcointools package from local folder
 popd
 
 rm -rf dist/
@@ -52,8 +53,8 @@ info "Running pyinstaller..."
 # ls ../..
 #wine "$PYHOME/scripts/pyinstaller.exe" --noconfirm --ascii --clean --name $NAME_ROOT-$VERSION -w deterministic.spec
 info "Running pyinstaller 2..."
-wine "$PYHOME/scripts/pyinstaller.exe" -cF --clean --name SeedKeeperTool-console-v.exe --additional-hooks-dir=. --add-data "../../seedkeeper/*.png;." --add-data "../../seedkeeper/wordlist/*.txt;wordlist/" --add-data "../../seedkeeper/help/*.txt;help/" "../../seedkeeper/seedkeeper.py" -i "../../seedkeeper/satochip.ico" 
-wine "$PYHOME/scripts/pyinstaller.exe" -wF --clean --name SeedKeeperTool-v.exe --additional-hooks-dir=. --add-data "../../seedkeeper/*.png;." --add-data  "../../seedkeeper/wordlist/*.txt;wordlist/" --add-data "../../seedkeeper/help/*.txt;help/"  "../../seedkeeper/seedkeeper.py" -i "../../seedkeeper/satochip.ico" 
+wine "$PYHOME/scripts/pyinstaller.exe" -cF --clean --name SatodimeTool-console-v.exe --additional-hooks-dir=. --add-data "../../SatodimeTool/*.png;." --add-data "../../SatodimeTool/help/*.txt;help/" --add-data "../../SatodimeTool/api_keys.ini;."  "../../SatodimeTool/satodime_tool.py" -i "../../SatodimeTool/satochip.ico" 
+wine "$PYHOME/scripts/pyinstaller.exe" -wF --clean --name SatodimeTool-v.exe --additional-hooks-dir=. --add-data "../../SatodimeTool/*.png;." --add-data "../../SatodimeTool/help/*.txt;help/" --add-data "../../SatodimeTool/api_keys.ini;."  "../../SatodimeTool/satodime_tool.py" -i "../../SatodimeTool/satochip.ico" 
 
 # set timestamps in dist, in order to make the installer reproducible
 pushd dist
@@ -103,4 +104,4 @@ EOF
     done
 )
 
-sha256sum dist/SeedKeeperTool*.exe
+sha256sum dist/SatodimeTool*.exe

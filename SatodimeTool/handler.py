@@ -1,39 +1,29 @@
-#import PySimpleGUI as sg   
-#import PySimpleGUIWx as sg 
 import PySimpleGUIQt as sg 
-import base64  #todo:remove  
+import base64 
 import json
 import getpass
 import sys
 import os
 import logging
 from os import urandom
-#from queue import Queue #todo: remove
-#from mnemonic import Mnemonic
 
-#from pysatochip.Satochip2FA import Satochip2FA
 from pysatochip.JCconstants import *  #JCconstants
 from pysatochip.CardConnector import CardConnector
 from pysatochip.CardConnector import UninitializedSeedError, SeedKeeperError, UnexpectedSW12Error, CardError, CardNotPresentError
-#from pysatochip.version import SATOCHIP_PROTOCOL_MAJOR_VERSION, SATOCHIP_PROTOCOL_MINOR_VERSION, SATOCHIP_PROTOCOL_VERSION
-#from pysatochip.version import SEEDKEEPER_PROTOCOL_MAJOR_VERSION, SEEDKEEPER_PROTOCOL_MINOR_VERSION, SEEDKEEPER_PROTOCOL_VERSION
 from pysatochip.version import SATODIME_PROTOCOL_MAJOR_VERSION, SATODIME_PROTOCOL_MINOR_VERSION, SATODIME_PROTOCOL_VERSION
 from pysatochip.version import PYSATOCHIP_VERSION
 
-from cryptos import transaction, main #deserialize
+#from cryptos import transaction, main #deserialize
 from cryptos.coins import Bitcoin, BitcoinCash, Litecoin
-
 
 # print("DEBUG START handler.py ")
 # print("DEBUG START handler.py __name__: "+__name__)
 # print("DEBUG START handler.py __package__: "+str(__package__))
 
 try: 
-    #"import electrum_mnemonic
     from version import SATODIMETOOL_VERSION
 except Exception as e:
     print('handler.py importError: '+repr(e))
-    #from . import electrum_mnemonic
     from .version import SATODIMETOOL_VERSION
     
 logger = logging.getLogger(__name__)
@@ -98,10 +88,6 @@ class HandlerSimpleGUI:
         self.satochip_icon= self.icon_path("satochip.png") #"satochip.png"
         self.satochip_unpaired_icon= self.icon_path("satochip_unpaired.png") #"satochip_unpaired.png"
         
-        # if self.client.cc.card_present:
-            # self.tray = sg.SystemTray(filename=self.satochip_icon) 
-        # else:
-            # self.tray = sg.SystemTray(filename=self.satochip_unpaired_icon) 
         self.tray = sg.SystemTray(filename=self.satochip_icon) 
          
          
@@ -113,10 +99,6 @@ class HandlerSimpleGUI:
     def update_status(self, isConnected):
         logger.debug('In update_status')
         self.client.card_event=True #trigger update of GUI 
-        #if (isConnected):
-            #self.tray.update(filename=self.satochip_icon) #self.tray.update(filename=r'satochip.png')
-        #else:
-            #self.tray.update(filename=self.satochip_unpaired_icon) #self.tray.update(filename=r'satochip_unpaired.png')
          
     def show_error(self, msg):
         sg.popup('Error!', msg, icon=self.satochip_unpaired_icon)
@@ -126,17 +108,7 @@ class HandlerSimpleGUI:
         sg.popup('Notification', msg, icon=self.satochip_icon)
     def show_notification(self, title, msg):
         #logger.debug("START show_notification")
-        #self.tray.ShowMessage("Notification", msg, filename=self.satochip_icon, time=10000) #old
-        # self.tray.ShowMessage("Notification", msg, messageicon=sg.SYSTEM_TRAY_MESSAGE_ICON_INFORMATION, time=100000)
-        
         self.tray.ShowMessage(title, msg, time=100000)
-        #sg.popup_quick_message('popup_quick_message')
-        
-        #self.tray.notify(title, msg) # AttributeError: 'SystemTray' object has no attribute 'notify'
-        #sg.popup_notify(title, display_duration_in_ms=3000, fade_in_duration=1000, alpha=0.9, location=None) #nok
-        #sg.SystemTray.notify(title, msg) # AttributeError: type object 'SystemTray' has no attribute 'notify'
-        #sg.SystemTray.show_message(title=title, message=msg)
-        #logger.debug("END show_notification")
         
     def approve_action(self, question):
         logger.debug('In approve_action')

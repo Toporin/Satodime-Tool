@@ -10,7 +10,7 @@ from pysatochip.CardConnector import CardConnector, UninitializedSeedError, Seed
 from pysatochip.JCconstants import *
 from pysatochip.version import SATODIME_PROTOCOL_MAJOR_VERSION, SATODIME_PROTOCOL_MINOR_VERSION, SATODIME_PROTOCOL_VERSION
 
-from cryptos import transaction, main #deserialize
+#from cryptos import transaction, main #deserialize
 from cryptos.coins import Bitcoin, BitcoinCash, Litecoin, Doge, Dash, Ethereum, BinanceSmartChain, EthereumClassic, xDai, RSK
 
 # print("DEBUG START client.py ")
@@ -55,8 +55,6 @@ class Client:
         logger.debug("In __init__")
         self.handler = handler
         self.handler.client= self
-        # self.queue_request= Queue()
-        # self.queue_reply= Queue()
         self.cc= cc
         self.truststore={}
         self.card_event= False
@@ -84,48 +82,9 @@ class Client:
         logger.debug('Client request: '+ str(request_type))
         
         method_to_call = getattr(self.handler, request_type)
-        #logger.debug('Type of method_to_call: '+ str(type(method_to_call)))
-        #logger.debug('Method_to_call: '+ str(method_to_call))
         reply = method_to_call(*args)
         return reply 
-    
-    # TODO: move to pysatochip...
-    def card_verify_authenticity(self):
-        logger.debug('In card_verify_authenticity')
         
-        # get certificate from device
-        cert_pem=txt_error=""
-        try:
-            cert_pem=self.cc.card_export_perso_certificate()
-            logger.debug('Cert PEM: '+ str(cert_pem))
-        except CardError as ex:
-            txt_error= ''.join(["Unable to get device certificate: feature unsupported! \n", 
-                                "Authenticity validation is only available starting with Satochip v0.12 and higher"])
-        except CardNotPresentError as ex:
-            txt_error= "No card found! Please insert card."
-        except UnexpectedSW12Error as ex:
-            txt_error= "Exception during device certificate export: " + str(ex)
-        
-        if cert_pem=="(empty)":
-            txt_error= "Device certificate is empty: the card has not been personalized!"
-        
-        if txt_error!="":
-            return False, "(empty)", "(empty)", "(empty)", txt_error
-        
-        # check the certificate chain from root CA to device
-        from pysatochip.certificate_validator import CertificateValidator
-        validator= CertificateValidator()
-        is_valid_chain, device_pubkey, txt_ca, txt_subca, txt_device, txt_error= validator.validate_certificate_chain(cert_pem, self.cc.card_type)
-        if not is_valid_chain:
-            return False, txt_ca, txt_subca, txt_device, txt_error
-        
-        # perform challenge-response with the card to ensure that the key is correctly loaded in the device
-        is_valid_chalresp, txt_error = self.cc.card_challenge_response_pki(device_pubkey)
-        
-        # TODO: verify that device subject matches card serial number
-        
-        return is_valid_chalresp, txt_ca, txt_subca, txt_device, txt_error
-    
     ########################################
     #                           Setup functions                                 #
     ########################################
@@ -484,8 +443,6 @@ class Client:
                                     # WIF:
                                     if use_address_comp:    
                                         privkey_wif= coin.encode_privkey(privkey_list, 'wif_compressed')
-                                        #privkey_wif_comp= coin.encode_privkey(privkey_list, 'wif_compressed') 
-                                        #keyslot_status['privkey_wif_comp']= privkey_wif_comp
                                     else:
                                         privkey_wif= coin.encode_privkey(privkey_list, 'wif')  
                                     logger.debug('PRIVKEY_WIF:'+privkey_wif) # TODO: remove!
@@ -628,7 +585,6 @@ class Client:
                 try:
                     (response, sw1, sw2) = self.cc.satodime_reset_key(key_nbr)
                     self.request('show_notification', "Success!", "Key reset successfully!")
-                    #self.request('show_success', f"Key successfully reset!")
                 except Exception as ex:
                     self.request('show_error', f"Exception during reset for key {key_nbr}: {str(ex)}")
                 return

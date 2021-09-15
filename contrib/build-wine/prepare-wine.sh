@@ -9,19 +9,19 @@
 # LIBUSB_URL=https://prdownloads.sourceforge.net/project/libusb/libusb-1.0/libusb-1.0.22/$LIBUSB_FILENAME?download
 # LIBUSB_SHA256=671f1a420757b4480e7fadc8313d6fb3cbb75ca00934c417c1efa6e77fb8779b
 
-PYINSTALLER_REPO="https://github.com/SomberNight/pyinstaller.git"
-PYINSTALLER_COMMIT=d1cdd726d6a9edc70150d5302453fb90fdd09bf2
-# ^ tag 3.4, plus a custom commit that fixes cross-compilation with MinGW
+# PYINSTALLER_REPO="https://github.com/SomberNight/pyinstaller.git"
+# PYINSTALLER_COMMIT=d1cdd726d6a9edc70150d5302453fb90fdd09bf2 # ^ tag 3.4, plus a custom commit that fixes cross-compilation with MinGW
+PYINSTALLER_REPO='https://github.com/EchterAgo/pyinstaller.git'
+PYINSTALLER_COMMIT=d6f3d02365ba68ffc84169c56c292701f346110e # Version 4.2 + a patch to drop an unused .rc file
+
 
 #Satochip pyscard (from https://ci.appveyor.com/project/LudovicRousseau/pyscard)
-# PYSCARD_FILENAME=pyscard-1.9.9-cp36-cp36m-win32.whl  # python 3.6, 32-bit
-# PYSCARD_URL=https://ci.appveyor.com/api/buildjobs/omymhxnv7mhw48tr/artifacts/dist/pyscard-1.9.9-cp36-cp36m-win32.whl
-# PYSCARD_SHA256=dd5334226039c1bd015d58f409c257a89ecd717f310bd49c4b302bb1095904f9
 PYSCARD_FILENAME=pyscard-1.9.9-cp36-cp36m-win32.whl  # python 3.6, 32-bit
 PYSCARD_URL=https://github.com/cculianu/Electron-Cash-Build-Tools/releases/download/v1.0/pyscard-1.9.9-cp36-cp36m-win32.whl
 PYSCARD_SHA256=99d2b450f322f9ed9682fd2a99d95ce781527e371006cded38327efca8158fe7
 
 PYTHON_VERSION=3.6.8
+#PYTHON_VERSION=3.8.8 
 
 ## These settings probably don't need change
 export WINEPREFIX=/opt/wine64

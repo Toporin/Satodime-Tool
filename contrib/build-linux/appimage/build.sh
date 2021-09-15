@@ -92,6 +92,7 @@ python='appdir_python'
 
 info "installing pip."
 "$python" -m ensurepip
+"$python" -m pip install --upgrade pip
 
 #todo
 info "installing SatodimeTool and its dependencies."
