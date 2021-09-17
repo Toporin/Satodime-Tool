@@ -424,11 +424,15 @@ class Client:
                                     keyslot_status['token_symbol']= token_info['symbol']
                                     keyslot_status['token_name']= token_info['name']
                                 except Exception as ex:
+                                    keyslot_status['token_balance']= "Unable to recover token balance"
+                                    keyslot_status['token_symbol']= "?"
+                                    keyslot_status['token_name']= "unknown"
                                     keyslot_status['is_error']= True
                                     keyslot_status['error']= str(ex)
                                     logger.debug(f'Exception while getting token info: {str(ex)}')
                                                             
                             # if keyslot is unsealed, recover private key
+                            # todo: only recover privkey if required (=> click more-details)
                             if satodime_keys_status[key_nbr]== STATE_UNSEALED:
                                 try: 
                                     (response, sw1, sw2, entropy_list, privkey_list) = self.cc.satodime_get_privkey(key_nbr)        
@@ -448,6 +452,7 @@ class Client:
                                     logger.debug('PRIVKEY_WIF:'+privkey_wif) # TODO: remove!
                                     keyslot_status['privkey_wif']= privkey_wif
                                     
+                                    # TODO: save bckp before reset
                                     # save privkey data  in config file as backup
                                     # NOTE: when a key is unsealed, funds should be transfered to another account ASAP!
                                     try: 
@@ -472,6 +477,7 @@ class Client:
                                     keyslot_status['privkey']= f"Error: {str(ex)}"
                                     keyslot_status['privkey_wif']= f"Error: {str(ex)}"
                                     keyslot_status['entropy_hex']=  f"Error: {str(ex)}"
+                                    keyslot_status['entropy_hex_parts']= f"Error: {str(ex)}"
                                     
                             #satodime_full_keystatus[key_nbr]= keyslot_status
                         except Exception as ex:
@@ -582,6 +588,10 @@ class Client:
                 self.request('show_message', f"Operation cancelled by user!")
                 return
             if event=='Reset':
+            
+                # TODO: save bckp before reset
+                
+                # reset_key
                 try:
                     (response, sw1, sw2) = self.cc.satodime_reset_key(key_nbr)
                     self.request('show_notification', "Success!", "Key reset successfully!")

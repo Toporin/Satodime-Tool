@@ -845,9 +845,9 @@ class HandlerSimpleGUI:
                 token_symbol= key_info['token_symbol']
                 token_name= key_info['token_name']
                 token_info= f"{token_balance} {token_name} ({token_symbol})"
-                frame_nft_info= [   [sg.Text('Contract: ', size=(20, 1)), sg.Multiline(key_contract_hex, size=(64,1)), sg.Button('Show QR Code', key='show_qr_contract')],
-                                                    [sg.Text('Token ID: ', size=(20, 1)), sg.Multiline(key_tokenid_hex, size=(64,1))],
-                                                    [sg.Text('NFT balance: ', size=(20, 1)), sg.Text(nft_info, background_color=color)],
+                frame_nft_info= [   [sg.Text('Contract: ', size=(20, 1), background_color=color), sg.Multiline(key_contract_hex, size=(64,1)), sg.Button('Show QR Code', key='show_qr_contract')],
+                                                    [sg.Text('Token ID: ', size=(20, 1), background_color=color), sg.Multiline(key_tokenid_hex, size=(64,1))],
+                                                    [sg.Text('NFT balance: ', size=(20, 1), background_color=color), sg.Text(token_info, background_color=color)],
                                         ]
                 layout.append( [sg.Frame("NFT info", frame_nft_info, background_color=color, key='frame_nft_info')] )
                 
