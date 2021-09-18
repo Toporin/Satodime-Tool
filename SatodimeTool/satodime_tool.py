@@ -34,14 +34,15 @@ cc = CardConnector(client, logger.getEffectiveLevel())
 time.sleep(1) # give some time to initialize reader...
 
 # default init values
-window=None
-max_num_keys=0
-satodime_keys_status= None
-satodime_full_keystatus=None
+# window=None
+# max_num_keys=0
+# satodime_keys_status= None
+# satodime_full_keystatus=None
 #satodime_full_coininfo= None
 while(True):
      
-    event, values, max_num_keys, satodime_keys_status, satodime_full_keystatus, window = client.main_menu(max_num_keys, satodime_keys_status, satodime_full_keystatus, window ) 
+    event, values= client.main_menu() 
+    #event, values, max_num_keys, satodime_keys_status, satodime_full_keystatus, window = client.main_menu(max_num_keys, satodime_keys_status, satodime_full_keystatus, window ) 
     #event, values, max_num_keys, satodime_keys_status, satodime_full_keystatus, satodime_full_coininfo = client.main_menu() #handler.main_menu()
     logger.debug("Event: "+ str(event))
     
@@ -66,8 +67,14 @@ while(True):
     elif event.startswith("show_details"):
         event_split= event.split('_')
         key_nbr= int(event_split[2])
+        
+        # if key is unsealed, recover privkey info:
+        privkey_info= client.get_privkey_info(key_nbr)
+        # merge info
+        client.satodime_full_keystatus[key_nbr].update(privkey_info)
+        
         try: 
-            handler.show_details(key_nbr, satodime_keys_status[key_nbr], satodime_full_keystatus[key_nbr])
+            handler.show_details(key_nbr, client.satodime_keys_status[key_nbr], client.satodime_full_keystatus[key_nbr])
         except Exception as ex:
             logger.debug("Exception in  details_menu: "+ str(ex))
     

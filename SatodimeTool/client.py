@@ -62,6 +62,11 @@ class Client:
         self.authentikey= None
         self.authentikey_comp_hex= None
         
+        self.window=None
+        self.max_num_keys=0
+        self.satodime_keys_status= None
+        self.satodime_full_keystatus=None
+        
         # get apikeys from file
         self.apikeys={}
         if getattr( sys, 'frozen', False ):
@@ -245,8 +250,8 @@ class Client:
                     with open('satodime_tool.ini', 'w') as f:
                         config.write(f)
                 except Exception as e:
-                                logger.warning("Exception while saving to config file:  "+ str(e))
-                                self.handler.show_error("Exception while saving to config file: "+ str(e))
+                                logger.warning("Exception while saving authentikey data to config file:  "+ str(e))
+                                self.handler.show_error("Exception while saving authentikey data to config file: "+ str(e))
                                 
             # recover unlock_secret from file then cache it 
             if path.isfile('satodime_tool.ini'):  
@@ -312,11 +317,103 @@ class Client:
             balance= f"Unable to recover balance"
             #logger.warning("Exception during coin.balance_web request: "+str(e))
         return (balance, is_error, error)
-        
-    def main_menu(self, max_num_keys, satodime_keys_status, satodime_full_keystatus, window):
+    
+    def get_privkey_info(self, key_nbr):
+        # if keyslot is unsealed, recover private key
+        # todo: only recover privkey if required (=> click more-details)
+        privkey_info={}
+        if self.satodime_keys_status[key_nbr]== STATE_UNSEALED:
+            try: 
+                (response, sw1, sw2, entropy_list, privkey_list) = self.cc.satodime_get_privkey(key_nbr)        
+                privkey_hex= '0x'+bytes(privkey_list).hex()
+                logger.debug('PRIVKEY:'+privkey_hex) # TODO: remove!
+                privkey_info['privkey_hex']= privkey_hex
+                privkey_info['privkey']= privkey_list
+                entropy_hex= bytes(entropy_list).hex()
+                entropy_hex_parts= bytes(entropy_list[0:32]).hex() + '\n' +  bytes(entropy_list[32:64]).hex() + '\n' +  bytes(entropy_list[64:96]).hex()
+                privkey_info['entropy_hex']= entropy_hex
+                privkey_info['entropy_hex_parts']= entropy_hex_parts
+                # WIF:
+                key_slip44_hex= self.satodime_full_keystatus[key_nbr]['key_slip44_hex']
+                coin= self.get_coin(key_slip44_hex, self.apikeys)
+                use_address_comp= self.satodime_full_keystatus[key_nbr]['use_address_comp']
+                if use_address_comp:    
+                    privkey_wif= coin.encode_privkey(privkey_list, 'wif_compressed')
+                else:
+                    privkey_wif= coin.encode_privkey(privkey_list, 'wif')  
+                #logger.debug('PRIVKEY_WIF:'+privkey_wif) # TODO: remove!
+                privkey_info['privkey_wif']= privkey_wif
+                
+                # # TODO: save bckp before reset
+                # # save privkey data  in config file as backup
+                # # NOTE: when a key is unsealed, funds should be transfered to another account ASAP!
+                # try: 
+                    # config = ConfigParser()
+                    # if path.isfile('satodime_tool.ini'):  
+                        # config.read('satodime_tool.ini')
+                    # if config.has_section(pubkey_hex) is False:
+                        # config.add_section(pubkey_hex)
+                    # config.set(pubkey_hex, 'address', addr)
+                    # if use_segwit: config.set(pubkey_hex, 'address_segwit', addr_segwit)
+                    # config.set(pubkey_hex, 'privkey', privkey_hex)
+                    # config.set(pubkey_hex, 'privkey_wif', privkey_wif)
+                    # with open('satodime_tool.ini', 'w') as f:
+                        # config.write(f)
+                # except Exception as e:
+                    # logger.warning("Exception while saving to config file:  "+ str(e))
+                    # self.handler.show_error("Exception while saving to config file: "+ str(e))
+                    
+            except Exception as ex:
+                privkey_info['privkey_hex']= f"Error: {str(ex)}"
+                privkey_info['privkey']= f"Error: {str(ex)}"
+                privkey_info['privkey_wif']= f"Error: {str(ex)}"
+                privkey_info['entropy_hex']=  f"Error: {str(ex)}"
+                privkey_info['entropy_hex_parts']= f"Error: {str(ex)}"
+    
+        return privkey_info
+    
+    def backup_privkey(self, key_nbr):
+    
+        # save privkey data  in config file as backup
+        # backup should be done before resetting a key, to avoid losing funds...
+        # NOTE: when a key is unsealed, funds should be transfered to another account ASAP!
+        try: 
+            key_slip44_hex= self.satodime_full_keystatus[key_nbr]['key_slip44_hex']
+            pubkey_hex= self.satodime_full_keystatus[key_nbr]['pubkey_hex']
+            addr= self.satodime_full_keystatus[key_nbr]['address']
+            use_segwit= self.satodime_full_keystatus[key_nbr]['use_segwit']
+            if use_segwit:
+                addr_segwit= self.satodime_full_keystatus[key_nbr]['address_comp_segwit']
+            
+            privkey_info= self.get_privkey_info(key_nbr)
+            privkey_hex= privkey_info['privkey_hex']
+            privkey_wif= privkey_info['privkey_wif']
+            
+            config = ConfigParser()
+            if path.isfile('satodime_tool.ini'):  
+                config.read('satodime_tool.ini')
+            if config.has_section(pubkey_hex) is False:
+                config.add_section(pubkey_hex)
+            config.set(pubkey_hex, 'slip44', key_slip44_hex, )
+            config.set(pubkey_hex, 'address', addr)
+            if use_segwit: 
+                config.set(pubkey_hex, 'address_segwit', addr_segwit)
+            config.set(pubkey_hex, 'privkey', privkey_hex)
+            config.set(pubkey_hex, 'privkey_wif', privkey_wif)
+            with open('satodime_tool.ini', 'w') as f:
+                config.write(f)
+            return True
+            
+        except Exception as e:
+            logger.warning("Exception while saving privkey data to config file:  "+ str(e))
+            self.handler.show_error("Exception while saving privkey data to config file: "+ str(e))
+            return False
+    
+    #def main_menu(self, max_num_keys, satodime_keys_status, satodime_full_keystatus, window):
+    def main_menu(self):
         logger.debug('In main_menu')
        
-        if window== None:
+        if self.window== None:
             self.card_event=True # force 
        
         while True:
@@ -324,7 +421,7 @@ class Client:
             if (self.card_event):
             
                 # get status & check if satodime & check authenticity
-                card_info= self.card_init_connect()
+                self.card_info= self.card_init_connect()
                   
                 # get satodime status
                 try:
@@ -335,12 +432,12 @@ class Client:
                     (response, sw1, sw2, satodime_status)= ([], 0x00, 0x00, {})
                     satodime_status= {'unlock_counter':[], 'max_num_keys':0, 'satodime_keys_status':[]}
                 
-                max_num_keys=satodime_status['max_num_keys']
-                satodime_keys_status= satodime_status['satodime_keys_status']
+                self.max_num_keys=satodime_status['max_num_keys']
+                self.satodime_keys_status= satodime_status['satodime_keys_status']
                 
                 # get keyslot status for each card
-                satodime_full_keystatus= max_num_keys*[None]
-                for key_nbr in range(max_num_keys):
+                self.satodime_full_keystatus= self.max_num_keys*[None]
+                for key_nbr in range(self.max_num_keys):
             
                     # get keyslot status
                     try: 
@@ -351,7 +448,7 @@ class Client:
                     #satodime_full_keystatus[key_nbr]= keyslot_status
                     
                     # get pubkey
-                    if satodime_keys_status[key_nbr] in [STATE_SEALED, STATE_UNSEALED]:
+                    if self.satodime_keys_status[key_nbr] in [STATE_SEALED, STATE_UNSEALED]:
                         try: 
                             (response, sw1, sw2, pubkey_list, pubkey_comp_list) = self.cc.satodime_get_pubkey(key_nbr)        
                             pubkey_hex= bytes(pubkey_list).hex()
@@ -431,53 +528,53 @@ class Client:
                                     keyslot_status['error']= str(ex)
                                     logger.debug(f'Exception while getting token info: {str(ex)}')
                                                             
-                            # if keyslot is unsealed, recover private key
-                            # todo: only recover privkey if required (=> click more-details)
-                            if satodime_keys_status[key_nbr]== STATE_UNSEALED:
-                                try: 
-                                    (response, sw1, sw2, entropy_list, privkey_list) = self.cc.satodime_get_privkey(key_nbr)        
-                                    privkey_hex= '0x'+bytes(privkey_list).hex()
-                                    logger.debug('PRIVKEY:'+privkey_hex) # TODO: remove!
-                                    keyslot_status['privkey_hex']= privkey_hex
-                                    keyslot_status['privkey']= privkey_list
-                                    entropy_hex= bytes(entropy_list).hex()
-                                    entropy_hex_parts= bytes(entropy_list[0:32]).hex() + '\n' +  bytes(entropy_list[32:64]).hex() + '\n' +  bytes(entropy_list[64:96]).hex()
-                                    keyslot_status['entropy_hex']= entropy_hex
-                                    keyslot_status['entropy_hex_parts']= entropy_hex_parts
-                                    # WIF:
-                                    if use_address_comp:    
-                                        privkey_wif= coin.encode_privkey(privkey_list, 'wif_compressed')
-                                    else:
-                                        privkey_wif= coin.encode_privkey(privkey_list, 'wif')  
-                                    logger.debug('PRIVKEY_WIF:'+privkey_wif) # TODO: remove!
-                                    keyslot_status['privkey_wif']= privkey_wif
+                            # # if keyslot is unsealed, recover private key
+                            # # todo: only recover privkey if required (=> click more-details)
+                            # if self.satodime_keys_status[key_nbr]== STATE_UNSEALED:
+                                # try: 
+                                    # (response, sw1, sw2, entropy_list, privkey_list) = self.cc.satodime_get_privkey(key_nbr)        
+                                    # privkey_hex= '0x'+bytes(privkey_list).hex()
+                                    # logger.debug('PRIVKEY:'+privkey_hex) # TODO: remove!
+                                    # keyslot_status['privkey_hex']= privkey_hex
+                                    # keyslot_status['privkey']= privkey_list
+                                    # entropy_hex= bytes(entropy_list).hex()
+                                    # entropy_hex_parts= bytes(entropy_list[0:32]).hex() + '\n' +  bytes(entropy_list[32:64]).hex() + '\n' +  bytes(entropy_list[64:96]).hex()
+                                    # keyslot_status['entropy_hex']= entropy_hex
+                                    # keyslot_status['entropy_hex_parts']= entropy_hex_parts
+                                    # # WIF:
+                                    # if use_address_comp:    
+                                        # privkey_wif= coin.encode_privkey(privkey_list, 'wif_compressed')
+                                    # else:
+                                        # privkey_wif= coin.encode_privkey(privkey_list, 'wif')  
+                                    # logger.debug('PRIVKEY_WIF:'+privkey_wif) # TODO: remove!
+                                    # keyslot_status['privkey_wif']= privkey_wif
                                     
-                                    # TODO: save bckp before reset
-                                    # save privkey data  in config file as backup
-                                    # NOTE: when a key is unsealed, funds should be transfered to another account ASAP!
-                                    try: 
-                                        config = ConfigParser()
-                                        if path.isfile('satodime_tool.ini'):  
-                                            config.read('satodime_tool.ini')
-                                        if config.has_section(pubkey_hex) is False:
-                                            config.add_section(pubkey_hex)
-                                        config.set(pubkey_hex, 'address', addr)
-                                        if use_segwit: config.set(pubkey_hex, 'address_segwit', addr_segwit)
-                                        config.set(pubkey_hex, 'privkey', privkey_hex)
-                                        config.set(pubkey_hex, 'privkey_wif', privkey_wif)
-                                        with open('satodime_tool.ini', 'w') as f:
-                                            config.write(f)
-                                    except Exception as e:
-                                        logger.warning("Exception while saving to config file:  "+ str(e))
-                                        self.handler.show_error("Exception while saving to config file: "+ str(e))
+                                    # # TODO: save bckp before reset
+                                    # # save privkey data  in config file as backup
+                                    # # NOTE: when a key is unsealed, funds should be transfered to another account ASAP!
+                                    # try: 
+                                        # config = ConfigParser()
+                                        # if path.isfile('satodime_tool.ini'):  
+                                            # config.read('satodime_tool.ini')
+                                        # if config.has_section(pubkey_hex) is False:
+                                            # config.add_section(pubkey_hex)
+                                        # config.set(pubkey_hex, 'address', addr)
+                                        # if use_segwit: config.set(pubkey_hex, 'address_segwit', addr_segwit)
+                                        # config.set(pubkey_hex, 'privkey', privkey_hex)
+                                        # config.set(pubkey_hex, 'privkey_wif', privkey_wif)
+                                        # with open('satodime_tool.ini', 'w') as f:
+                                            # config.write(f)
+                                    # except Exception as e:
+                                        # logger.warning("Exception while saving to config file:  "+ str(e))
+                                        # self.handler.show_error("Exception while saving to config file: "+ str(e))
                                         
-                                except Exception as ex:
-                                    (response, sw1, sw2, privkey_list)= ([], 0x00, 0x00, [])
-                                    keyslot_status['privkey_hex']= f"Error: {str(ex)}"
-                                    keyslot_status['privkey']= f"Error: {str(ex)}"
-                                    keyslot_status['privkey_wif']= f"Error: {str(ex)}"
-                                    keyslot_status['entropy_hex']=  f"Error: {str(ex)}"
-                                    keyslot_status['entropy_hex_parts']= f"Error: {str(ex)}"
+                                # except Exception as ex:
+                                    # (response, sw1, sw2, privkey_list)= ([], 0x00, 0x00, [])
+                                    # keyslot_status['privkey_hex']= f"Error: {str(ex)}"
+                                    # keyslot_status['privkey']= f"Error: {str(ex)}"
+                                    # keyslot_status['privkey_wif']= f"Error: {str(ex)}"
+                                    # keyslot_status['entropy_hex']=  f"Error: {str(ex)}"
+                                    # keyslot_status['entropy_hex_parts']= f"Error: {str(ex)}"
                                     
                             #satodime_full_keystatus[key_nbr]= keyslot_status
                         except Exception as ex:
@@ -489,25 +586,25 @@ class Client:
                         (pubkey_list, pubkey_comp_list)= None, None
                 
                     # update state with gathered info
-                    satodime_full_keystatus[key_nbr]= keyslot_status
+                    self.satodime_full_keystatus[key_nbr]= keyslot_status
                 
                 # update layout
-                layout = self.handler.make_layout3(card_info, max_num_keys, satodime_keys_status, satodime_full_keystatus)
+                layout = self.handler.make_layout3(self.card_info, self.max_num_keys, self.satodime_keys_status, self.satodime_full_keystatus)
                 window_new = sg.Window('Satodime Tool', layout, icon=self.handler.satochip_icon)#.Finalize() 
-                if window is not None: window.close()
-                window = window_new            
+                if self.window is not None: self.window.close()
+                self.window = window_new            
                 
                 self.card_event= False
                 
                 continue
             
-            event, values = window.read(timeout=200)    
+            event, values = self.window.read(timeout=200)    
             if event != sg.TIMEOUT_KEY:
                 break      
         
         #if window is not None: window.close()  
         #del window
-        return event, values, max_num_keys, satodime_keys_status, satodime_full_keystatus, window
+        return event, values #, max_num_keys, satodime_keys_status, satodime_full_keystatus, window
     
     
     def action_menu(self, action, key_nbr):
@@ -589,7 +686,13 @@ class Client:
                 return
             if event=='Reset':
             
-                # TODO: save bckp before reset
+                # save bckp before reset
+                is_backup= self.backup_privkey(key_nbr) #privkey_info= self.get_privkey_info(key_nbr)
+                if not is_backup:
+                    question= "Failed to backup privkeys to 'satodime_tool.ini'. Are you sure you want to reset this key?"
+                    proceed= handler.yes_no_question(question) #True or False
+                    if not proceed:
+                        return
                 
                 # reset_key
                 try:
@@ -597,13 +700,13 @@ class Client:
                     self.request('show_notification', "Success!", "Key reset successfully!")
                 except Exception as ex:
                     self.request('show_error', f"Exception during reset for key {key_nbr}: {str(ex)}")
+                
                 return
             else: # should not happen
                 return 
         
         else: # should not happen
             return
-            
             
         
         
