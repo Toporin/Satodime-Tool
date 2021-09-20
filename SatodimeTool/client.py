@@ -124,14 +124,9 @@ class Client:
                 card_info['is_error']= True
                 card_info['error']= msg
                 return card_info
-            
-            #TODO: remove?
-            if  (self.cc.setup_done):
-                if (self.cc.needs_secure_channel):
-                    self.cc.card_initiate_secure_channel() 
                 
             # START setup device (done only once)
-            else:
+            if  (not self.cc.setup_done):
                 # these values are not use, just provided for compatibility with Satochip & SeedKeeper
                 pin_0= list(urandom(4));  # RFU #list(values['pin'].encode('utf8'))
                 pin_tries_0= 0x05;
