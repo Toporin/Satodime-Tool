@@ -460,7 +460,7 @@ class HandlerSimpleGUI:
     #                              SATODIME                            #      
     ####################################
         
-    def make_layout3(self, card_info, max_num_keys, satodime_keys_status, satodime_full_keystatus):
+    def make_layout3(self, card_info, max_num_keys, satodime_keys_status, satodime_keys_info):
         
         buttons= [ ('Black', 'Grey'), ('Black', 'Green'), ('Black', 'orange') ]
         colors=['Grey', 'LightGreen', '#FFD580']  # #FFD580 is light orange
@@ -496,11 +496,11 @@ class HandlerSimpleGUI:
             #label= "Key #"+ str(key_nbr)
             
             # get keyslot status for key
-            keyslot_status= satodime_full_keystatus[key_nbr]
+            key_info= satodime_keys_info[key_nbr]
             
             # parse metadata
-            key_status= keyslot_status['key_status']
-            key_status_txt= keyslot_status['key_status_txt']
+            key_status= key_info['key_status']
+            key_status_txt= key_info['key_status_txt']
             
             frame_layout=[]
             color= colors[key_status]
@@ -516,13 +516,13 @@ class HandlerSimpleGUI:
                                                 
             elif key_status== STATE_SEALED or key_status== STATE_UNSEALED:
                 
-                coin_pubkey_hex= keyslot_status['pubkey_comp_hex']
+                coin_pubkey_hex= key_info['pubkey_comp_hex']
                 logger.debug('PUBKEY:'+coin_pubkey_hex)
-                coin_address= keyslot_status['address'] #keyslot_status['address_comp']  if keyslot_status['use_address_comp'] else  keyslot_status['address'] # for example eth use uncompressed addr
+                coin_address= key_info['address'] #key_info['address_comp']  if key_info['use_address_comp'] else  key_info['address'] # for example eth use uncompressed addr
                 logger.debug('ADDRESS:'+coin_address)
-                coin_name= keyslot_status['name']
-                coin_symbol= keyslot_status['symbol']
-                coin_balance= keyslot_status['balance_total']
+                coin_name= key_info['name']
+                coin_symbol= key_info['symbol']
+                coin_balance= key_info['balance_total']
                 coin_info= f"{coin_balance} {coin_name} ({coin_symbol})"
                 
                 # coin info                
@@ -531,24 +531,14 @@ class HandlerSimpleGUI:
                                                 [sg.Text('Balance: ', size=(size_txt, 1), background_color=color), sg.Text(coin_info, background_color=color)],
                                             ]
                 
-                #key_asset= keyslot_status['key_asset']
-                #key_asset_txt= keyslot_status['key_asset_txt']
-                #key_slip44= keyslot_status['key_slip44']
-                #key_slip44_hex= keyslot_status['key_slip44_hex']
-                #key_contract= keyslot_status['key_contract']
-                #key_contract_hex=  keyslot_status['key_contract_hex']
-                #key_tokenid= keyslot_status['key_tokenid']
-                #key_tokenid_hex= keyslot_status['key_tokenid_hex']
-                #key_data= keyslot_status['key_data'] 
-                #key_data_txt= keyslot_status['key_data_txt'] 
-                is_token= keyslot_status['is_token']
-                is_nft= keyslot_status['is_nft']
+                is_token= key_info['is_token']
+                is_nft= key_info['is_nft']
                 
                 # token info if any
                 if is_token or is_nft:
-                    token_balance= keyslot_status['token_balance']
-                    token_symbol= keyslot_status['token_symbol']
-                    token_name= keyslot_status['token_name']
+                    token_balance= key_info['token_balance']
+                    token_symbol= key_info['token_symbol']
+                    token_name= key_info['token_name']
                     token_info= f"{token_balance} {token_name} ({token_symbol})"
                     token_txt= 'Token balance: ' if is_token else 'NFT balance: '
                     frame_layout+= [[sg.Text(token_txt, size=(size_txt, 1), background_color=color), sg.Text(token_info, background_color=color)],
@@ -556,12 +546,6 @@ class HandlerSimpleGUI:
                 if is_nft:
                     token_id= 'TODO'
                     # # todo: get token_id
-                    # nft_balance= 0
-                    # nft_symbol= "TODO"
-                    # nft_name= "TODO"
-                    # nft_info= f"{nft_balance} {nft_name} ({nft_symbol})"
-                    # frame_layout+= [[sg.Text('NFT balance: ', size=(size_txt, 1), background_color=color), sg.Text(nft_info, background_color=color)],
-                                            # ]
                 
                 if key_status== STATE_SEALED: 
                     frame_layout+= [[ sg.Button('Unseal key!', disabled= False, key='action_unseal_'+str(key_nbr)), 

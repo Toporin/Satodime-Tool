@@ -65,7 +65,7 @@ class Client:
         self.window=None
         self.max_num_keys=0
         self.satodime_keys_status= []
-        self.satodime_full_keystatus= []
+        self.satodime_keys_info= []
         
         self.card_event= True # force update at start
         self.card_event_slots=[]
@@ -269,7 +269,7 @@ class Client:
             return card_info
         
         # no card present 
-        self.satodime_full_keystatus=[]
+        self.satodime_keys_info=[]
         card_info['is_error']= True
         card_info['error']= "No card found. Please insert card"
         return card_info
@@ -333,9 +333,9 @@ class Client:
                 privkey_info['entropy_hex']= entropy_hex
                 privkey_info['entropy_hex_parts']= entropy_hex_parts
                 # WIF:
-                key_slip44_hex= self.satodime_full_keystatus[key_nbr]['key_slip44_hex']
+                key_slip44_hex= self.satodime_keys_info[key_nbr]['key_slip44_hex']
                 coin= self.get_coin(key_slip44_hex, self.apikeys)
-                use_address_comp= self.satodime_full_keystatus[key_nbr]['use_address_comp']
+                use_address_comp= self.satodime_keys_info[key_nbr]['use_address_comp']
                 if use_address_comp:    
                     privkey_wif= coin.encode_privkey(privkey_list, 'wif_compressed')
                 else:
@@ -358,12 +358,12 @@ class Client:
         # backup should be done before resetting a key, to avoid losing funds...
         # NOTE: when a key is unsealed, funds should be transfered to another account ASAP!
         try: 
-            key_slip44_hex= self.satodime_full_keystatus[key_nbr]['key_slip44_hex']
-            pubkey_hex= self.satodime_full_keystatus[key_nbr]['pubkey_hex']
-            addr= self.satodime_full_keystatus[key_nbr]['address']
-            use_segwit= self.satodime_full_keystatus[key_nbr]['use_segwit']
+            key_slip44_hex= self.satodime_keys_info[key_nbr]['key_slip44_hex']
+            pubkey_hex= self.satodime_keys_info[key_nbr]['pubkey_hex']
+            addr= self.satodime_keys_info[key_nbr]['address']
+            use_segwit= self.satodime_keys_info[key_nbr]['use_segwit']
             if use_segwit:
-                addr_segwit= self.satodime_full_keystatus[key_nbr]['address_comp_segwit']
+                addr_segwit= self.satodime_keys_info[key_nbr]['address_comp_segwit']
             
             privkey_info= self.get_privkey_info(key_nbr)
             privkey_hex= privkey_info['privkey_hex']
@@ -389,12 +389,8 @@ class Client:
             self.handler.show_error("Exception while saving privkey data to config file: "+ str(e))
             return False
     
-    #def main_menu(self, max_num_keys, satodime_keys_status, satodime_full_keystatus, window):
     def main_menu(self):
         logger.debug('In main_menu')
-       
-        # if self.window== None:
-            # self.card_event=True # force 
        
         while True:
         
@@ -415,15 +411,13 @@ class Client:
                 self.max_num_keys=satodime_status['max_num_keys']
                 self.satodime_keys_status= satodime_status['satodime_keys_status']
                 
-                # logger.debug(f'In main_menu satodime_full_keystatus0: {self.satodime_full_keystatus}')
+                # logger.debug(f'In main_menu satodime_keys_info0: {self.satodime_keys_info}')
                 # logger.debug(f'In main_menu card_event_slots0: {self.card_event_slots}')
                     
                 # get keyslot status for each card
-                if self.satodime_full_keystatus == []: 
-                    self.satodime_full_keystatus= self.max_num_keys*[None]
+                if self.satodime_keys_info == []: 
+                    self.satodime_keys_info= self.max_num_keys*[None]
                     self.card_event_slots= range(self.max_num_keys)
-                    # logger.debug(f'In main_menu satodime_full_keystatus: {self.satodime_full_keystatus}')
-                    # logger.debug(f'In main_menu card_event_slots: {self.card_event_slots}')
                     
                 for key_nbr in self.card_event_slots: #range(self.max_num_keys):
             
@@ -514,7 +508,7 @@ class Client:
                                     keyslot_status['error']= str(ex)
                                     logger.debug(f'Exception while getting token info: {str(ex)}')
                                     
-                            #satodime_full_keystatus[key_nbr]= keyslot_status
+                            #satodime_keys_info[key_nbr]= keyslot_status
                         except Exception as ex:
                             (response, sw1, sw2, pubkey_list)= ([], 0x00, 0x00, [])
                             pubkey_hex= f"Error: {str(ex)}"
@@ -524,12 +518,12 @@ class Client:
                         (pubkey_list, pubkey_comp_list)= None, None
                 
                     # update state with gathered info
-                    self.satodime_full_keystatus[key_nbr]= keyslot_status
+                    self.satodime_keys_info[key_nbr]= keyslot_status
                 
                 # update layout
-                # logger.debug(f'In main_menu satodime_full_keystatus2: {self.satodime_full_keystatus}')
+                # logger.debug(f'In main_menu satodime_keys_info2: {self.satodime_keys_info}')
                 # logger.debug(f'In main_menu card_event_slots2: {self.card_event_slots}')
-                layout = self.handler.make_layout3(self.card_info, self.max_num_keys, self.satodime_keys_status, self.satodime_full_keystatus)
+                layout = self.handler.make_layout3(self.card_info, self.max_num_keys, self.satodime_keys_status, self.satodime_keys_info)
                 window_new = sg.Window('Satodime Tool', layout, icon=self.handler.satochip_icon)#.Finalize() 
                 if self.window is not None: self.window.close()
                 self.window = window_new            
@@ -545,12 +539,10 @@ class Client:
         
         #if window is not None: window.close()  
         #del window
-        return event, values #, max_num_keys, satodime_keys_status, satodime_full_keystatus, window
+        return event, values
     
     
     def action_menu(self, action, key_nbr):
-        
-        #self.card_event= True # force update of  variables storing state
         
         if action=='seal':
             
