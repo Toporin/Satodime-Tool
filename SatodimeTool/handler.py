@@ -805,9 +805,16 @@ class HandlerSimpleGUI:
             layout.append( [sg.Frame("Keyslot info", frame_key_info, background_color=color, key='frame_key_info')] )
             
             frame_coin_info=[ [sg.Text('Blockchain: ', size=(20, 1), background_color=color), sg.Text(f"{coin_name} ({key_slip44_hex})", background_color=color)],
-                                                [sg.Text('Address: ', size=(20, 1), background_color=color), sg.Multiline(coin_address, size=(64,1)), sg.Button('Show QR Code', key='show_qr_addr')] ,
-                                                [sg.Text('Address segwit: ', size=(20, 1), background_color=color), sg.Multiline(coin_address_segwit, size=(64,1)), sg.Button('Show QR Code', key='show_qr_segwit') ] if use_segwit else [], # 
-                                                [sg.Text('Balance: ', size=(20, 1), background_color=color), sg.Text(coin_data, background_color=color)],]
+                                                #[sg.Text('Address: ', size=(20, 1),  enable_events=True, key='weburl1', background_color=color), sg.Multiline(coin_address, size=(64,1)), sg.Button('Show QR Code', key='show_qr_addr')] ,
+                                                [sg.Button('Address: ', key='weburl1'), sg.Multiline(coin_address, size=(64,1)), sg.Button('Show QR Code', key='show_qr_addr')] ,
+                                                #[sg.Text('Address segwit: ', size=(20, 1), background_color=color), sg.Multiline(coin_address_segwit, size=(64,1)), sg.Button('Show QR Code', key='show_qr_segwit') ] if use_segwit else [],
+                                                [sg.Button('Address segwit: ', key='weburl2'), sg.Multiline(coin_address_segwit, size=(64,1)), sg.Button('Show QR Code', key='show_qr_segwit') ] if use_segwit else [], 
+                                                [sg.Text('Balance: ', size=(20, 1), background_color=color), sg.Text(coin_data, background_color=color)], 
+                                                # [sg.Text('Balance: ', size=(20, 1), background_color=color), sg.Text(coin_data, background_color=color), 
+                                                                # sg.Button("Explorer", key='weburl1'), sg.Button("Explorer", key='weburl2')] if use_segwit else 
+                                                # [sg.Text('Balance: ', size=(20, 1), background_color=color), sg.Text(coin_data, background_color=color), 
+                                                                 # sg.Text("", key='weburl3', background_color=color), sg.Button("Explorer", key='weburl1')],         
+                                        ]
             layout.append( [sg.Frame("Coin info", frame_coin_info, background_color=color, key='frame_coin_info')] )
             
             # token info if any
@@ -877,6 +884,12 @@ class HandlerSimpleGUI:
                 self.QRDialog(coin_address, title = "SatodimeTool: QR code", msg= 'This is the QR code of your address')
             elif event=='show_qr_contract':
                 self.QRDialog(key_contract_hex, title = "SatodimeTool: QR code", msg= 'This is the QR code of  the token contract')
+            elif event=='weburl1':
+                import webbrowser
+                webbrowser.open(key_info['address_weburl'])
+            elif event=='weburl2':
+                import webbrowser
+                webbrowser.open(key_info['address_comp_segwit_weburl'])
             else:      
                 break     
         

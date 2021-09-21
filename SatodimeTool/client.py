@@ -456,12 +456,14 @@ class Client:
                                      logger.debug('ADDR:'+addr)
                                 if DEBUG: addr= DEBUG_ADDRS[coin.coin_symbol] #TODO DEBUG API
                                 keyslot_status['address']= addr
-                                     
+                                keyslot_status['address_weburl']= coin.address_weburl(addr)
+                                
                                 use_segwit= coin.segwit_supported
                                 keyslot_status['use_segwit']= use_segwit
                                 if use_segwit:
                                     addr_segwit=  coin.pubtosegwit(bytes(pubkey_comp_list))
                                     keyslot_status['address_comp_segwit']= addr_segwit
+                                    keyslot_status['address_comp_segwit_weburl']= coin.address_weburl(addr_segwit)
                                     logger.debug('ADDR_COMP_SEGWIT_BYTES:'+addr_segwit) # todo: check if segwit is supported
                             except Exception as ex:
                                 keyslot_status['is_error']= True
