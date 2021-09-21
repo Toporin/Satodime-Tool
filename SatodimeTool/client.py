@@ -423,9 +423,9 @@ class Client:
             
                     # get keyslot status
                     try: 
-                        (response, sw1, sw2, keyslot_status) = self.cc.satodime_get_keyslot_status(key_nbr)        
+                        (response, sw1, sw2, key_info) = self.cc.satodime_get_keyslot_status(key_nbr)        
                     except CardNotPresentError:
-                        (response, sw1, sw2, keyslot_status)= ([], 0x00, 0x00, {})
+                        (response, sw1, sw2, key_info)= ([], 0x00, 0x00, {})
                     
                     # get pubkey
                     if self.satodime_keys_status[key_nbr] in [STATE_SEALED, STATE_UNSEALED]:
@@ -433,21 +433,21 @@ class Client:
                             (response, sw1, sw2, pubkey_list, pubkey_comp_list) = self.cc.satodime_get_pubkey(key_nbr)        
                             pubkey_hex= bytes(pubkey_list).hex()
                             pubkey_comp_hex= bytes(pubkey_comp_list).hex()
-                            keyslot_status['pubkey_hex']= pubkey_hex
-                            keyslot_status['pubkey_comp_hex']= pubkey_comp_hex
+                            key_info['pubkey_hex']= pubkey_hex
+                            key_info['pubkey_comp_hex']= pubkey_comp_hex
                             logger.debug('PUBKEY:'+pubkey_hex)
                             logger.debug('PUBKEY_COMP:'+pubkey_comp_hex)
                             
                             # recover address from pubkey
-                            key_slip44_hex= keyslot_status['key_slip44_hex']
+                            key_slip44_hex= key_info['key_slip44_hex']
                             logger.debug('key_slip44_hex:'+key_slip44_hex)
                             try:
                                 coin= self.get_coin(key_slip44_hex, self.apikeys)
-                                keyslot_status['name']= coin.display_name
-                                keyslot_status['symbol']= coin.coin_symbol
+                                key_info['name']= coin.display_name
+                                key_info['symbol']= coin.coin_symbol
                                 
                                 use_address_comp= coin.use_compressed_addr
-                                keyslot_status['use_address_comp']= use_address_comp
+                                key_info['use_address_comp']= use_address_comp
                                 if use_address_comp:
                                     addr= coin.pubtoaddr(bytes(pubkey_comp_list))
                                     logger.debug('ADDR_COMP:'+addr)
@@ -455,19 +455,19 @@ class Client:
                                      addr= coin.pubtoaddr(bytes(pubkey_list))
                                      logger.debug('ADDR:'+addr)
                                 if DEBUG: addr= DEBUG_ADDRS[coin.coin_symbol] #TODO DEBUG API
-                                keyslot_status['address']= addr
-                                keyslot_status['address_weburl']= coin.address_weburl(addr)
+                                key_info['address']= addr
+                                key_info['address_weburl']= coin.address_weburl(addr)
                                 
                                 use_segwit= coin.segwit_supported
-                                keyslot_status['use_segwit']= use_segwit
+                                key_info['use_segwit']= use_segwit
                                 if use_segwit:
                                     addr_segwit=  coin.pubtosegwit(bytes(pubkey_comp_list))
-                                    keyslot_status['address_comp_segwit']= addr_segwit
-                                    keyslot_status['address_comp_segwit_weburl']= coin.address_weburl(addr_segwit)
+                                    key_info['address_comp_segwit']= addr_segwit
+                                    key_info['address_comp_segwit_weburl']= coin.address_weburl(addr_segwit)
                                     logger.debug('ADDR_COMP_SEGWIT_BYTES:'+addr_segwit) # todo: check if segwit is supported
                             except Exception as ex:
-                                keyslot_status['is_error']= True
-                                keyslot_status['error']= str(ex)
+                                key_info['is_error']= True
+                                key_info['error']= str(ex)
                                 logger.debug(f'Exception with coin: {str(ex)}')
                             
                             # get balance from addr/addr_comp and addr_segwit
@@ -477,7 +477,7 @@ class Client:
                                 balance_total+=balance
                             else:
                                 balance= error
-                            keyslot_status['balance']=balance
+                            key_info['balance']=balance
                                 
                             if use_segwit:
                                 (balance_segwit, is_error_segwit, error_segwit)= self.get_balance(coin, addr_segwit)
@@ -485,32 +485,32 @@ class Client:
                                     balance_total+=balance_segwit
                                 else:
                                     balance_segwit= error_segwit
-                                keyslot_status['balance_segwit']=balance_segwit
+                                key_info['balance_segwit']=balance_segwit
                            
-                            keyslot_status['balance_total']=balance_total
+                            key_info['balance_total']=balance_total
                             
                             # token info
-                            if (keyslot_status['is_nft'] or keyslot_status['is_token']):
+                            if (key_info['is_nft'] or key_info['is_token']):
                                 try:
-                                    if DEBUG: keyslot_status['key_contract_hex']= DEBUG_CONTRACT[coin.coin_symbol] # TODO DEBUG API
-                                    contract=keyslot_status['key_contract_hex']
+                                    if DEBUG: key_info['key_contract_hex']= DEBUG_CONTRACT[coin.coin_symbol] # TODO DEBUG API
+                                    contract=key_info['key_contract_hex']
                                     token_balance= coin.balance_token(addr, contract)
                                     logger.debug(f'token_balance: {str(token_balance)}')# debug
                                     token_info= coin.get_token_info(addr, contract)
                                     token_decimals= int(token_info['decimals'] )
                                     logger.debug(f'token_info: {str(token_info)}')# debug
-                                    keyslot_status['token_balance']= token_balance/(10**token_decimals)
-                                    keyslot_status['token_symbol']= token_info['symbol']
-                                    keyslot_status['token_name']= token_info['name']
+                                    key_info['token_balance']= token_balance/(10**token_decimals)
+                                    key_info['token_symbol']= token_info['symbol']
+                                    key_info['token_name']= token_info['name']
                                 except Exception as ex:
-                                    keyslot_status['token_balance']= "Unable to recover token balance"
-                                    keyslot_status['token_symbol']= "?"
-                                    keyslot_status['token_name']= "unknown"
-                                    keyslot_status['is_error']= True
-                                    keyslot_status['error']= str(ex)
+                                    key_info['token_balance']= "Unable to recover token balance"
+                                    key_info['token_symbol']= "?"
+                                    key_info['token_name']= "unknown"
+                                    key_info['is_error']= True
+                                    key_info['error']= str(ex)
                                     logger.debug(f'Exception while getting token info: {str(ex)}')
                                     
-                            #satodime_keys_info[key_nbr]= keyslot_status
+                            #satodime_keys_info[key_nbr]= key_info
                         except Exception as ex:
                             (response, sw1, sw2, pubkey_list)= ([], 0x00, 0x00, [])
                             pubkey_hex= f"Error: {str(ex)}"
@@ -520,7 +520,7 @@ class Client:
                         (pubkey_list, pubkey_comp_list)= None, None
                 
                     # update state with gathered info
-                    self.satodime_keys_info[key_nbr]= keyslot_status
+                    self.satodime_keys_info[key_nbr]= key_info
                 
                 # update layout
                 # logger.debug(f'In main_menu satodime_keys_info2: {self.satodime_keys_info}')
