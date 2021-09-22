@@ -1,23 +1,68 @@
-Introduction à SeedKeeper
-=====================
+Manuel d'utilisation de Satodime
+=========================
 
-Qu'est-ce que SeedKeeper?
-------------------------------------------
+Qu'est-ce que Satodime ?
+-----------------------------------------
 
+Satodime est une carte à puce qui stocke des paires de clés cryptographiques en toute sécurité dans une puce sécurisée (également appelée Secure Element). 
+Chaque paire de clés peut être associée à une adresse spécifique sur une blockchain. 
 
-Quelqiues définitions
---------------------------------
+Chaque paire de clés est générée à l'intérieur de la puce sécurisée et peut être dans l'un des trois états suivants à tout moment :
+	- non-initialisée : la paire de clés n'a pas encore été générée
+	- scellée : la paire de clés a été générée de manière sécurisée à l'intérieur de la puce.
+	- descellée : la clé privée a été révélée.
 
-* Mnemonic:
-* Masterseed:
-* Authentikey:
+Comme la clé privée est générée à l'intérieur de la puce sécurisée, le porteur d'un Satodime peut être certain que personne (y compris lui-même) ne connaît la clé privée jusqu'à ce qu'elle soit descellée.
+Par conséquent, une Satodime permet de transférer physiquement des crypto-monnaies telles que le Bitcoin d'une personne à une autre, sans avoir à faire confiance au porteur du Satodime, A CONDITION QUE LA CLÉ SOIT BIEN DANS L'ÉTAT SCELLÉ.
 
-Comment utiliser votre SeedKeeper?
--------------------------------------------------------
+Selon le modèle, de 1 à 3 paires de clés peuvent être stockées simultanément sur une Satodime.
 
+Présentation du SatodimeTool
+----------------------------------------------
 
-Comment utiliser votre SeedKeeper avec votre Satochip?
----------------------------------------------------------------------------------------
+Lorsque le SatodimeTool est lancé, il recherche activement les cartes Satodime sur toutes les interfaces disponibles.
+Dès qu'une carte Satodime est détectée, le SatodimeTool initie une connexion et vérifie l'authenticité des cartes, le résultat de cette vérification est affiché dans la fenêtre principale dans le champ "état de la carte". Si un problème survient avec la carte, des détails supplémentaires sont fournis en cliquant sur le bouton "Détails".
 
+Sous l'onglet "Informations sur la carte", l'état et les informations de chaque slot de clé sont indiqués. Rappelez-vous qu'un Satodime peut avoir jusqu'à trois slots disponibles, et que chaque slot peut être dans l'état "Non initialisé", "Scellé" ou "Non scellé".
+Si un slot est scellé ou descellé, plus de détails sont fournis en cliquant sur le bouton "Plus de détails" pour le slot correspondant. Les informations disponibles comprennent le type d'actif, la blockchain utilisée et le solde disponible pour l'adresse associée.
 
+Dans une carte Satodime nouvellement émise, tous les slots sont dans l'état "Non initialisé", ce qui signifie que les clés privées correspondantes n'ont pas encore été générées. Vous pouvez sceller un keyslot en cliquant sur le bouton 'Seal' : un menu pop-up apparaît qui permet de définir les caractéristiques de la clé générée, y compris le type d'actif à stocker (une cryptomonnaie, un token ou un NFT), la blockchain utilisée (comme BTC, ETH,...) et, le cas échéant, l'adresse du contrat (pour les tokens et les NFT) et le tokenID (pour les tokens non fongibles). Une fois confirmé, la keypair privé-public est générée et l'adresse correspondante est affichée dans le menu principal.
 
+Pour un keyslot donné, la transition entre les états suit toujours le même cycle : 'Uninitialized' => 'Sealed' => 'Unsealed' => 'Uninitialized' => ...
+Des keyslots différents sur le même Satodime ne sont pas liés et peuvent avoir des statuts différents à tout moment.
+
+Lorsqu'un slot de clé est descellé, la clé privée est mise à la disposition de l'utilisateur et peut être récupérée en cliquant sur le bouton "plus de détails" du slot correspondant. Une fois que la clé privée est descellée, elle n'est plus protégée par la puce sécurisée et tout bien associé à l'adresse correspondante doit être transféré immédiatement à une nouvelle adresse. Cela se fait généralement en "balayant" la clé privée et de nombreux portefeuilles offrent cette option (par exemple, Electrum et Metamask). VOUS NE DEVEZ JAMAIS ACCEPTER UN SATODIME DE QUELQU'UN SI UN DÉPOT DE CLÉS EST DESCELLÉ !
+
+Une fois qu'un keyslot est descellé et qu'un bien a été transféré, vous pouvez réinitialiser le keyslot pour le remettre dans son état "non initialisé" et recommencer un nouveau cycle.
+
+Caractéristiques de sécurité du Satodime
+-----------------------------------------
+
+- Authenticité du Satodime : 
+Le Satodime comprend un mécanisme cryptographique qui permet de vérifier si la carte est une authentique Satodime ou un faux. Si la carte n'est pas authentifiée, vous devez être extrêmement prudent et éviter d'y stocker des valeurs. Le mécanisme d'authentification est basé sur un certificat numérique unique émis pour chaque Satodime authentique et vérifié par une infrastructure à clé publique.
+
+- Génération sécurisée de clés : 
+Les paires de clés privées/publiques stockées sur le Satodime sont toujours générées de manière aléatoire à l'intérieur de la puce sécurisée. Tant que la puce est scellée, personne n'a accès à la clé privée. Pour prouver que les clés privées n'ont pas été générées au préalable pendant la fabrication et qu'aucune porte dérobée n'a été insérée dans le firmware, l'utilisateur est invité à saisir une valeur aléatoire de 64 hex pendant le processus de scellement. Cette entrée aléatoire est utilisée pour fournir de l'entropie pendant le processus de génération de la clé. Lorsque le slot de la clé est descellé et que la clé privée est révélée, les données d'entropie (y compris l'entrée de l'utilisateur) sont fournies et permettent de s'assurer que le processus de génération de la clé était effectivement aléatoire.
+
+- Protection du transfert de propriété :
+Satodime (et le SatodimeTool) supporte la communication à travers 2 interfaces : l'interface sans fil NFC (Near Field Communication) et l'interface filaire à travers un lecteur de carte à puce standard.
+Il est important de noter que le comportement du Satodime est légèrement différent selon l'interface utilisée : l'interface filaire est considérée comme "de confiance" alors que la NFC ne l'est pas. En pratique, cela signifie que n'importe qui peut effectuer n'importe quelle opération via l'interface filaire (de confiance), tandis que certaines opérations sensibles ne peuvent être effectuées via l'interface NFC que par le propriétaire légitime. Les opérations sensibles comprennent toutes les opérations qui modifient l'état d'un slot de clés (comme le descellement). Ainsi, le propriétaire actuel d'un Satodime peut en toute confiance laisser un acquéreur potentiel scanner la carte sur son propre appareil (par exemple pour vérifier le solde disponible) sans risquer de desceller et de sweeper une clé privée.
+Pour distinguer le propriétaire légitime de la carte des autres utilisateurs, un processus d'appariement est lancé lorsque la carte est transférée à un nouveau propriétaire. Pour initier ce transfert, l'ancien propriétaire doit simplement cliquer sur le bouton "Transférer la carte" dans l'onglet "Infos carte" du menu principal. Immédiatement après, la carte doit être déconnectée et remise au nouveau propriétaire pour initier un nouvel appariement. Un message s'affiche alors pour confirmer qu'un nouvel appairage a été établi avec succès avec le nouveau propriétaire via le SatodimeTool. Si le transfert de propriété n'a pas été initié par l'ancien propriétaire, le nouveau propriétaire DEVRAIT effectuer ce transfert dès que possible. La procédure est la même, sauf que dans ce cas, il DOIT être effectué via l'interface filaire "de confiance" (puisque l'appairage est une opération sensible et qu'il ne peut être effectué via l'interface NFC que par le propriétaire légitime).
+
+API externes
+-----------------------
+Afin de récupérer le solde associé à une adresse, SatodimeTool utilise plusieurs services externes via des APIs web.
+Les informations suivantes sont envoyées au serveur externe dans ce but uniquement :
+	- Adresse
+	- Adresse du contrat (pour les tokens et les NFTs)
+	- Clé API (si requise par un service tel que etherscan.io)
+
+Les services externes suivants sont utilisés :
+	- blockstream.info (BTC)
+	- fullstack.cash (BCH)
+	- blockchain.com (BCH)
+	- etherscan.io (ETH)
+	- ethplorer.io (ETH)
+	- blockscout.com (ETC, xDAI, RSK)
+	- bscscan.com (BSC)
+	- chain.so (LTC, DOGE, DASH)
