@@ -588,7 +588,7 @@ class HandlerSimpleGUI:
             [sg.Text('', size=(12, 1), key='metadata_prompt', visible=use_metadata), sg.InputText(key='metadata', visible=use_metadata)], 
 
             [sg.Button('Seal', bind_return_key=True), sg.Cancel() ], # sg.Cancel()
-            [sg.Text('', size=(40,1), key='on_error', text_color='red')],
+            [sg.Text('', size=(68,1), key='on_error', text_color='red')],
         ] 
         
         window = sg.Window(f'SatodimeTool: seal keyslot # {str(key_nbr)}', layout, icon=self.satochip_icon) 
@@ -600,8 +600,11 @@ class HandlerSimpleGUI:
                 try:
                     #check entropy
                     entropy= values['entropy']
+                    if entropy == '':
+                        raise ValueError(f"Provide 64 hex characters of entropy or click on 'Generate' for random generation")
                     int(entropy, 16) # check if correct hex
                     entropy= entropy[entropy.startswith("0x") and len("0x"):] #strip '0x' if need be
+                    entropy= entropy[entropy.startswith("0X") and len("0X"):] #strip '0x' if need be
                     if len(entropy) not in [64]:
                         raise ValueError(f"Wrong entropy length: {len(entropy)} (should be 64 hex characters)")
                     # check contract
@@ -609,6 +612,7 @@ class HandlerSimpleGUI:
                     if contract !='':
                         int(contract, 16) # check if correct hex
                         contract= contract[contract.startswith("0x") and len("0x"):] #strip '0x' if need be
+                        contract= contract[contract.startswith("0X") and len("0X"):] #strip '0x' if need be
                         if len(contract) > 64: #TODO: check according to coin
                             raise ValueError(f"Wrong contract length: {len(entropy)} (should be max 64 hex characters)") 
                         values['contract_address']= contract
@@ -617,6 +621,7 @@ class HandlerSimpleGUI:
                     if token_id != '':
                         int(token_id, 16) # check if correct hex
                         token_id= token_id[token_id.startswith("0x") and len("0x"):] #strip '0x' if need be
+                        token_id= token_id[token_id.startswith("0X") and len("0X"):] #strip '0X' if need be
                         if len(token_id) > 64:
                             raise ValueError(f"Wrong tokenId length: {len(token_id)} (should be max 64 hex characters)")
                         values['token_id']= token_id

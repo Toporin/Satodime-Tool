@@ -17,8 +17,8 @@ except Exception as e:
     from SatodimeTool.client import Client
     from SatodimeTool.handler import HandlerSimpleGUI
                 
-# to run from source, in parent folder: python3 -m  satodime_tool.py -v 
-# alternatively, also in parent folder: python3  SatodimeTool/satodime_tool.py -v 
+# to run from source, in parent folder: python3 -m satodime_tool.py -v 
+# alternatively, also in parent folder: python3 SatodimeTool/satodime_tool.py -v 
 
 if (len(sys.argv)>=2) and (sys.argv[1]in ['-v', '--verbose']):
     logging.basicConfig(level=logging.DEBUG, format='%(levelname)s [%(module)s] %(funcName)s | %(message)s')

@@ -281,8 +281,12 @@ class Client:
     
     def get_coin(self, key_slip44_hex:str, apikeys:dict):
         
+        # if msb is 0, this means we use testnet
         key_slip44_list= list(bytes.fromhex(key_slip44_hex))
         is_testnet= (key_slip44_list[0] & 0x80) == 0x00
+        # now set msb to 1 to normalize
+        key_slip44_list[0] = (key_slip44_list[0]  |  0x80)
+        key_slip44_hex= bytes(key_slip44_list).hex()
         if key_slip44_hex== "80000000":
             coin= Bitcoin(is_testnet, apikeys=apikeys) 
         elif key_slip44_hex== "80000002":
@@ -298,7 +302,7 @@ class Client:
         elif key_slip44_hex== "80000207":
             coin= BinanceSmartChain(is_testnet, apikeys=apikeys) # todo: convert to cashaddress?
         else:
-            coin= Bitcoin(True)  # use by default?
+            coin= Bitcoin(True)  # use BTC testnet by default?
             #raise Exception(f"Unsupported coin with slip44 code {key_slip44_hex}")
         
         return coin
@@ -374,7 +378,7 @@ class Client:
                 config.read('satodime_tool.ini')
             if config.has_section(pubkey_hex) is False:
                 config.add_section(pubkey_hex)
-            config.set(pubkey_hex, 'slip44', key_slip44_hex, )
+            config.set(pubkey_hex, 'slip44', key_slip44_hex)
             config.set(pubkey_hex, 'address', addr)
             if use_segwit: 
                 config.set(pubkey_hex, 'address_segwit', addr_segwit)
@@ -590,7 +594,7 @@ class Client:
             if key_data=='':
                 key_data= SIZE_DATA*[0x00]
             else:
-                key_data=list(key_data.encode(utf-8))
+                key_data=list(key_data.encode("utf-8"))
                 key_data= [0, len(key_data)] + key_data + (SIZE_DATA-2-len(key_data))*[0x00]
             (response, sw1, sw2)= self.cc.satodime_set_keyslot_status_part1(key_nbr, key_data)
             #(response, sw1, sw2)= self.cc.satodime_set_keyslot_status(key_nbr, RFU1, RFU2, key_asset, key_slip44, key_contract, key_tokenid, key_data)
