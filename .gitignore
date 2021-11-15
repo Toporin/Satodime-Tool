@@ -1,8 +1,10 @@
 SatodimeTool/__pycache__/
 SatodimeTool/api_keys.ini
+SatodimeTool.egg-info/
 __pycache__/
 *.pyc
 dist/
+build/
 contrib/build-linux/appimage/build/
 contrib/build-linux/appimage/.cache/
 contrib/build-wine/.cache/

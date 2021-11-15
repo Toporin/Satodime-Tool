@@ -312,13 +312,13 @@ class Client:
         is_error= False
         error=""
         try: 
-            logger.warning("GET BALANCE : "+str(addr))
+            logger.debug("GET BALANCE : "+str(addr))
             balance= coin.balance_web(addr)
         except Exception as e:
             is_error= True
             error= str(e)
             balance= f"Unable to recover balance"
-            #logger.warning("Exception during coin.balance_web request: "+str(e))
+            logger.warning("Exception during coin.balance_web request: "+str(e))
         return (balance, is_error, error)
     
     def get_privkey_info(self, key_nbr):

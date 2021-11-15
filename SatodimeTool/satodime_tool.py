@@ -38,7 +38,7 @@ while(True):
     event, values= client.main_menu() 
     logger.debug("Event: "+ str(event))
      
-    if event in ['Quit', None]:
+    if event in ['quit', None]:
         break;
     
     elif event== 'show_card_authenticity':
