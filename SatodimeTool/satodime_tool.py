@@ -54,6 +54,10 @@ while(True):
             handler.show_notification('Information: ', "Transfer of card initiated successfully!")
         pass
     
+    elif event== 'refresh_card_info':
+        client.card_event= True # force update of  variables storing state
+        client.card_event_slots= range(client.max_num_keys)
+    
     elif event.startswith("show_details"):
         event_split= event.split('_')
         key_nbr= int(event_split[2])

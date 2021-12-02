@@ -484,8 +484,9 @@ class HandlerSimpleGUI:
             else: 
                 color_valid= 'Red'
                 txt_valid=  'WARNING: there is an issue with this Satodime! '
-            frame_card_info= [ [    sg.Text('Card status:', background_color= color_valid), sg.Text(txt_valid, background_color= color_valid),],
+            frame_card_info= [ [    sg.Text('Card status:', size=(size_txt, 1), background_color= color_valid), sg.Text(txt_valid, background_color= color_valid),],
                                                 [   sg.Button('Details', disabled= False, key='show_card_authenticity'),
+                                                    sg.Button('Refresh', disabled= False, key='refresh_card_info'),
                                                     sg.Button('Transfer card', disabled= False, key='transfer_card') ] 
                                             ]
         layout.append( [sg.Frame('Card info', frame_card_info, background_color='LightBlue', key='frame_card_info',  font='Any 12')] )
