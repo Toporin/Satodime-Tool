@@ -284,9 +284,12 @@ class Client:
         # if msb is 0, this means we use testnet
         key_slip44_list= list(bytes.fromhex(key_slip44_hex))
         is_testnet= (key_slip44_list[0] & 0x80) == 0x00
+        logger.debug("In get_coin(): is_testnet: "+str(is_testnet))
         # now set msb to 1 to normalize
         key_slip44_list[0] = (key_slip44_list[0]  |  0x80)
         key_slip44_hex= bytes(key_slip44_list).hex()
+        logger.debug("In get_coin(): key_slip44_hex: "+key_slip44_hex)
+        
         if key_slip44_hex== "80000000":
             coin= Bitcoin(is_testnet, apikeys=apikeys) 
         elif key_slip44_hex== "80000002":
@@ -297,14 +300,17 @@ class Client:
             coin= Dash(is_testnet, apikeys=apikeys) 
         elif key_slip44_hex== "8000003c":
             coin= Ethereum(is_testnet, apikeys=apikeys) 
+        elif key_slip44_hex== "8000003d":
+            coin= EthereumClassic(is_testnet, apikeys=apikeys) 
+        elif key_slip44_hex== "80000089":
+            coin= RSK(is_testnet, apikeys=apikeys) 
         elif key_slip44_hex== "80000091":
             coin= BitcoinCash(is_testnet, apikeys=apikeys) # todo: convert to cashaddress?
         elif key_slip44_hex== "80000207":
             coin= BinanceSmartChain(is_testnet, apikeys=apikeys) # todo: convert to cashaddress?
         else:
             coin= Bitcoin(True)  # use BTC testnet by default?
-            #raise Exception(f"Unsupported coin with slip44 code {key_slip44_hex}")
-        
+            #raise Exception(f"Unsupported coin with slip44 code {key_slip44_hex}")        
         return coin
     
     def get_balance(self, coin, addr):

@@ -570,6 +570,8 @@ class HandlerSimpleGUI:
 
     def dialog_seal(self, key_nbr):
         
+        #LIST_ASSET= ['Coin', 'Token', 'ERC20', 'BEP20', 'NFT', 'ERC721', 'BEP721'] #
+        LIST_ASSET= ['Coin', 'Token', 'ERC20', 'NFT', 'ERC721'] #
         use_metadata=False
         layout = [
             # TODO: generate random entropy
