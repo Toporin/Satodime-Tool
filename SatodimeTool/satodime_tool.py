@@ -30,7 +30,7 @@ logger.warning("loglevel: "+ str(logger.getEffectiveLevel()) )
 
 handler= HandlerSimpleGUI(logger.getEffectiveLevel())
 client= Client(None, handler, logger.getEffectiveLevel())
-cc = CardConnector(client, logger.getEffectiveLevel())
+cc = CardConnector(client, logger.getEffectiveLevel(), "satodime")
 time.sleep(1) # give some time to initialize reader...
 
 while(True):

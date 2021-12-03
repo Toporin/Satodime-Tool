@@ -16,6 +16,7 @@ pycryptodomex
 eth-hash
 #pysha3 # requires Microsoft Visual C++ 14.0
 pycryptodome
+cashaddress
 
 # GUI
 PySimpleGUIQt==0.31.0
