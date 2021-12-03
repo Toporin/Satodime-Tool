@@ -14,7 +14,7 @@ from pysatochip.version import SATODIME_PROTOCOL_MAJOR_VERSION, SATODIME_PROTOCO
 from pysatochip.version import PYSATOCHIP_VERSION
 
 #from cryptos import transaction, main #deserialize
-from cryptos.coins import Bitcoin, BitcoinCash, Litecoin
+#from cryptos.coins import Bitcoin, BitcoinCash, Litecoin
 
 # print("DEBUG START handler.py ")
 # print("DEBUG START handler.py __name__: "+__name__)

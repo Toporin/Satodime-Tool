@@ -11,7 +11,7 @@ from pysatochip.JCconstants import *
 from pysatochip.version import SATODIME_PROTOCOL_MAJOR_VERSION, SATODIME_PROTOCOL_MINOR_VERSION, SATODIME_PROTOCOL_VERSION
 
 #from cryptos import transaction, main #deserialize
-from cryptos.coins import Bitcoin, BitcoinCash, Litecoin, Doge, Dash, Ethereum, BinanceSmartChain, EthereumClassic, xDai, RSK
+from pycryptotools.coins import Bitcoin, BitcoinCash, Litecoin, Doge, Dash, Ethereum, BinanceSmartChain, EthereumClassic, xDai, RSK
 
 # print("DEBUG START client.py ")
 # print("DEBUG START client.py __name__: "+__name__)
