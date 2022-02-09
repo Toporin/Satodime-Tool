@@ -477,6 +477,11 @@ class HandlerSimpleGUI:
             frame_card_info= [[ sg.Text('Card status:', background_color= color_valid), sg.Text(txt_valid, background_color= color_valid), ]]
         else:
             # card info
+            is_owner= card_info["is_owner"]
+            if is_owner:
+                txt_owner= "You are the card owner"
+            else:
+                txt_owner= "You are NOT the card owner"
             is_authentic= card_info['is_authentic']
             if is_authentic:
                 color_valid= 'LightBlue' 
@@ -485,6 +490,7 @@ class HandlerSimpleGUI:
                 color_valid= 'Red'
                 txt_valid=  'WARNING: there is an issue with this Satodime! '
             frame_card_info= [ [    sg.Text('Card status:', size=(size_txt, 1), background_color= color_valid), sg.Text(txt_valid, background_color= color_valid),],
+                                                [    sg.Text('Card owner:', size=(size_txt, 1), background_color= color_valid), sg.Text(txt_owner, background_color= color_valid),],
                                                 [   sg.Button('Details', disabled= False, key='show_card_authenticity'),
                                                     sg.Button('Refresh', disabled= False, key='refresh_card_info'),
                                                     sg.Button('Transfer card', disabled= False, key='transfer_card') ] 

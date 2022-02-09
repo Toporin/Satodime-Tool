@@ -104,6 +104,7 @@ class Client:
         unlock_counter=None
         unlock_secret= None
         card_info={}
+        card_info['is_owner']= False
         card_info['is_error']= False
         card_info['error']= 'No error'
         card_info['about']='card info are stored in this dict' # to do!
@@ -150,10 +151,11 @@ class Client:
                         pin_tries_1, ublk_tries_1, pin_1, ublk_1, 
                         secmemsize, memsize, 
                         create_object_ACL, create_key_ACL, create_pin_ACL)
-                if sw1==0x90 or sw2==0x00:       
+                if sw1==0x90 and sw2==0x00:       
                     logger.info(f"Setup applet response: {response}")
                     unlock_counter= response[0:SIZE_UNLOCK_COUNTER]
                     unlock_secret= response[SIZE_UNLOCK_COUNTER:(SIZE_UNLOCK_COUNTER+SIZE_UNLOCK_SECRET)]
+                    card_info['is_owner']= True
                     #self.cc.satodime_set_unlock_counter(unlock_counter)
                     #self.cc.satodime_set_unlock_secret(unlock_secret)
                 else:
@@ -265,6 +267,7 @@ class Client:
                     unlock_counter= list(bytes.fromhex(unlock_counter_hex))
                     self.cc.satodime_set_unlock_counter(unlock_counter)
                     self.cc.satodime_set_unlock_secret(unlock_secret)
+                    card_info['is_owner']= True
             # return true if wizard finishes correctly 
             return card_info
         
