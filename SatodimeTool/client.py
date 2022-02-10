@@ -376,7 +376,8 @@ class Client:
             addr= self.satodime_keys_info[key_nbr]['address']
             use_segwit= self.satodime_keys_info[key_nbr]['use_segwit']
             if use_segwit:
-                addr_segwit= self.satodime_keys_info[key_nbr]['address_comp_segwit']
+                #addr_segwit= self.satodime_keys_info[key_nbr]['address_comp_segwit']
+                addr_legacy= self.satodime_keys_info[key_nbr]['address_legacy']
             
             privkey_info= self.get_privkey_info(key_nbr)
             privkey_hex= privkey_info['privkey_hex']
@@ -390,7 +391,8 @@ class Client:
             config.set(pubkey_hex, 'slip44', key_slip44_hex)
             config.set(pubkey_hex, 'address', addr)
             if use_segwit: 
-                config.set(pubkey_hex, 'address_segwit', addr_segwit)
+                #config.set(pubkey_hex, 'address_segwit', addr_segwit)
+                config.set(pubkey_hex, 'address_legacy', addr_legacy)
             config.set(pubkey_hex, 'privkey', privkey_hex)
             config.set(pubkey_hex, 'privkey_wif', privkey_wif)
             with open('satodime_tool.ini', 'w') as f:
@@ -415,9 +417,7 @@ class Client:
                 # get satodime status
                 try:
                     (response, sw1, sw2, satodime_status) = self.cc.satodime_get_status()
-                    #self.cc.satodime_set_unlock_counter( satodime_status['unlock_counter'] )
                 except CardNotPresentError:
-                    #(response, sw1, sw2, max_num_keys, satodime_keys_status)= ([], 0x00, 0x00, 0, [])
                     (response, sw1, sw2, satodime_status)= ([], 0x00, 0x00, {})
                     satodime_status= {'unlock_counter':[], 'max_num_keys':0, 'satodime_keys_status':[]}
                 
@@ -461,12 +461,15 @@ class Client:
                                 
                                 use_address_comp= coin.use_compressed_addr
                                 key_info['use_address_comp']= use_address_comp
-                                if use_address_comp:
-                                    addr= coin.pubtoaddr(bytes(pubkey_comp_list))
-                                    logger.debug('ADDR_COMP:'+addr)
-                                else:
-                                     addr= coin.pubtoaddr(bytes(pubkey_list))
-                                     logger.debug('ADDR:'+addr)
+                                addr= coin.pubtoaddr(bytes(pubkey_list))
+                                logger.debug('ADDR: '+addr)
+                                # if use_address_comp:
+                                    # #addr= coin.pubtoaddr(bytes(pubkey_comp_list))
+                                    # addr= coin.pubtoaddr(bytes(pubkey_list))
+                                    # logger.debug('ADDR_COMP:'+addr)
+                                # else:
+                                    # addr= coin.pubtoaddr(bytes(pubkey_list))
+                                    # logger.debug('ADDR:'+addr)
                                 if DEBUG: addr= DEBUG_ADDRS[coin.coin_symbol] #TODO DEBUG API
                                 key_info['address']= addr
                                 key_info['address_weburl']= coin.address_weburl(addr)
@@ -474,10 +477,15 @@ class Client:
                                 use_segwit= coin.segwit_supported
                                 key_info['use_segwit']= use_segwit
                                 if use_segwit:
-                                    addr_segwit=  coin.pubtosegwit(bytes(pubkey_comp_list))
-                                    key_info['address_comp_segwit']= addr_segwit
-                                    key_info['address_comp_segwit_weburl']= coin.address_weburl(addr_segwit)
-                                    logger.debug('ADDR_COMP_SEGWIT_BYTES:'+addr_segwit) # todo: check if segwit is supported
+                                    # addr_segwit=  coin.pubtosegwit(bytes(pubkey_comp_list))
+                                    # key_info['address_comp_segwit']= addr_segwit
+                                    # key_info['address_comp_segwit_weburl']= coin.address_weburl(addr_segwit)
+                                    # logger.debug('ADDR_COMP_SEGWIT_BYTES:'+addr_segwit) # todo: check if segwit is supported
+                                    addr_legacy=  coin.pubtolegacy(bytes(pubkey_list))
+                                    key_info['address_legacy']= addr_legacy
+                                    key_info['address_legacy_weburl']= coin.address_weburl(addr_legacy)
+                                    logger.debug('ADDR_COMP_LEGACY_BYTES:'+addr_legacy) 
+                                    
                             except Exception as ex:
                                 key_info['is_error']= True
                                 key_info['error']= str(ex)
@@ -493,12 +501,14 @@ class Client:
                             key_info['balance']=balance
                                 
                             if use_segwit:
-                                (balance_segwit, is_error_segwit, error_segwit)= self.get_balance(coin, addr_segwit)
-                                if not is_error_segwit:
-                                    balance_total+=balance_segwit
+                                #(balance_segwit, is_error_segwit, error_segwit)= self.get_balance(coin, addr_segwit)
+                                (balance_legacy, is_error_legacy, error_legacy)= self.get_balance(coin, addr_legacy)
+                                if not is_error_legacy:
+                                    balance_total+=balance_legacy
                                 else:
-                                    balance_segwit= error_segwit
-                                key_info['balance_segwit']=balance_segwit
+                                    balance_legacy= error_legacy
+                                #key_info['balance_segwit']=balance_segwit
+                                key_info['balance_legacy']=balance_legacy
                            
                             key_info['balance_total']=balance_total
                             

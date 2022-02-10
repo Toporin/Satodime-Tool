@@ -944,14 +944,16 @@ class HandlerSimpleGUI:
             coin_address= key_info['address'] #key_info['address_comp']  if key_info['use_address_comp'] else  key_info['address'] # for example eth use uncompressed addr
             #logger.debug('ADDRESS:'+coin_address)
             use_segwit= key_info['use_segwit'] 
-            coin_address_segwit= key_info['address_comp_segwit']  if use_segwit else ""
+            #coin_address_segwit= key_info['address_comp_segwit']  if use_segwit else ""
+            coin_address_legacy= key_info['address_legacy']  if use_segwit else ""
             coin_name= key_info['name']
             coin_symbol= key_info['symbol']
             coin_balance= key_info['balance_total']
             coin_data= f"{coin_balance} {coin_name} ({coin_symbol})"
             if use_segwit:
-                coin_data+= f"\t[non-Segwit: {key_info['balance']}  & Segwit: {key_info['balance_segwit']}]"
-            
+                coin_data+= f"\t[Segwit: {key_info['balance']}  & legacy: {key_info['balance_legacy']}]"
+                #coin_data+= f"\t[non-Segwit: {key_info['balance']}  & Saegwit: {key_info['balance_segwit']}]"
+                
             # coin info                
             frame_key_info= [ [sg.Text('Status: ', size=(20, 1), background_color=color), sg.Text(key_status_txt, background_color=color)],
                                             [sg.Text('Pubkey: ', size=(20, 1), background_color=color), sg.Text(coin_pubkey_hex, background_color=color)],   
@@ -963,7 +965,8 @@ class HandlerSimpleGUI:
                                                 #[sg.Text('Address: ', size=(20, 1),  enable_events=True, key='weburl1', background_color=color), sg.Multiline(coin_address, size=(64,1)), sg.Button('Show QR Code', key='show_qr_addr')] ,
                                                 [sg.Button('Address: ', key='weburl1'), sg.Multiline(coin_address, size=(64,1)), sg.Button('Show QR Code', key='show_qr_addr')] ,
                                                 #[sg.Text('Address segwit: ', size=(20, 1), background_color=color), sg.Multiline(coin_address_segwit, size=(64,1)), sg.Button('Show QR Code', key='show_qr_segwit') ] if use_segwit else [],
-                                                [sg.Button('Address segwit: ', key='weburl2'), sg.Multiline(coin_address_segwit, size=(64,1)), sg.Button('Show QR Code', key='show_qr_segwit') ] if use_segwit else [], 
+                                                #[sg.Button('Address segwit: ', key='weburl2'), sg.Multiline(coin_address_segwit, size=(64,1)), sg.Button('Show QR Code', key='show_qr_segwit') ] if use_segwit else [], 
+                                                [sg.Button('Legacy (DO NOT USE!): ', key='weburl2'), sg.Multiline(coin_address_legacy + "-DONOTUSE!", size=(64,1)), sg.Button('Show QR Code', key='show_qr_legacy') ] if use_segwit else [], 
                                                 [sg.Text('Balance: ', size=(20, 1), background_color=color), sg.Text(coin_data, background_color=color)], 
                                                 # [sg.Text('Balance: ', size=(20, 1), background_color=color), sg.Text(coin_data, background_color=color), 
                                                                 # sg.Button("Explorer", key='weburl1'), sg.Button("Explorer", key='weburl2')] if use_segwit else 
@@ -1033,8 +1036,10 @@ class HandlerSimpleGUI:
                 self.QRDialog(privkey_hex, title = "SatodimeTool: QR code", msg= 'This is the QR code of your hex private key. \nMake sure to treat it with respect!')
             elif event=='show_qr_wif':
                 self.QRDialog(privkey_wif, title = "SatodimeTool: QR code", msg= 'This is the QR code of your WIF private key. \nMake sure to treat it with respect!')
-            elif event=='show_qr_segwit':
-                self.QRDialog(coin_address_segwit, title = "SatodimeTool: QR code", msg= 'This is the QR code of your segwit address')
+            # elif event=='show_qr_segwit':
+                # self.QRDialog(coin_address_segwit, title = "SatodimeTool: QR code", msg= 'This is the QR code of your segwit address')
+            elif event=='show_qr_legacy':
+                self.QRDialog(coin_address_legacy + "-DONOTUSE!", title = "SatodimeTool: QR code", msg= 'This is the QR code of your LEGACY address \nPlease do NOT use - only for backward compatibility')
             elif event=='show_qr_addr':
                 self.QRDialog(coin_address, title = "SatodimeTool: QR code", msg= 'This is the QR code of your address')
             elif event=='show_qr_contract':
@@ -1044,7 +1049,8 @@ class HandlerSimpleGUI:
                 webbrowser.open(key_info['address_weburl'])
             elif event=='weburl2':
                 import webbrowser
-                webbrowser.open(key_info['address_comp_segwit_weburl'])
+                #webbrowser.open(key_info['address_comp_segwit_weburl'])
+                webbrowser.open(key_info['address_legacy_weburl'])
             else:      
                 break     
         
