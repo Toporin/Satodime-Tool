@@ -596,8 +596,10 @@ class Client:
             if key_tokenid=='':
                 key_tokenid= SIZE_TOKENID*[0x00]
             else:
-                key_tokenid= list(bytes.fromhex(key_tokenid))
-                key_tokenid=[0, len(key_tokenid)] + key_tokenid +  (SIZE_TOKENID-2-len(key_tokenid))*[0x00]
+                token_id_int= int(key_tokenid, 10) # check if correct dec
+                token_id_bytes= token_id_int.to_bytes(SIZE_TOKENID-2, 'big') # OverflowError thrown if too big
+                token_id_bytes= token_id_bytes.lstrip(b'\x00') # trim leading null bytes
+                key_tokenid=[0, len(token_id_bytes)] + list(token_id_bytes) +  (SIZE_TOKENID-2-len(token_id_bytes))*[0x00]
             (response, sw1, sw2)= self.cc.satodime_set_keyslot_status_part0(key_nbr, RFU1, RFU2, key_asset, key_slip44, key_contract, key_tokenid)
             
             if key_data=='':
@@ -606,7 +608,6 @@ class Client:
                 key_data=list(key_data.encode("utf-8"))
                 key_data= [0, len(key_data)] + key_data + (SIZE_DATA-2-len(key_data))*[0x00]
             (response, sw1, sw2)= self.cc.satodime_set_keyslot_status_part1(key_nbr, key_data)
-            #(response, sw1, sw2)= self.cc.satodime_set_keyslot_status(key_nbr, RFU1, RFU2, key_asset, key_slip44, key_contract, key_tokenid, key_data)
             # TODO notification?
             self.request('show_notification', "Success!", "Key sealed successfully!")
             return

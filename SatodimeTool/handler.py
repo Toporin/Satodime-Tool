@@ -5,6 +5,7 @@ import getpass
 import sys
 import os
 import logging
+import hashlib
 from os import urandom
 
 from pysatochip.JCconstants import *  #JCconstants
@@ -30,10 +31,10 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 try: 
-    from slip44 import LIST_SLIP44
+    from slip44 import LIST_SLIP44, LIST_SLIP44_TOKEN_SUPPORT
 except Exception as e:
     print('handler.py importError: '+repr(e))
-    from .slip44 import LIST_SLIP44
+    from .slip44 import LIST_SLIP44, LIST_SLIP44_TOKEN_SUPPORT
 
 class HandlerTxt:
     def __init__(self):
@@ -576,6 +577,146 @@ class HandlerSimpleGUI:
         return layout
 
     def dialog_seal(self, key_nbr):
+        
+        LIST_ASSET_LIMITED= ['Coin'] 
+        LIST_ASSET_FULL= ['Coin', 'Token', 'NFT'] 
+        use_metadata=False
+        layout = [
+            [sg.Text('Coin type: ', size=(12, 1), visible=True), 
+                sg.InputCombo(LIST_SLIP44, default_value='BTC', key='list_slip44', enable_events=True, size=(40, 1)),  
+                sg.Checkbox('use testnet', key='use_testnet', default=False)],
+            
+            [sg.Text('Asset type: ', size=(12, 1)), sg.InputCombo(LIST_ASSET_LIMITED, default_value='Coin', key='list_asset_type', enable_events=True, size=(40, 1)) ],
+            
+            [sg.Text('', size=(12, 1), key='txt_contract', enable_events=True, visible=False), sg.InputText(key='contract_address', size=(68, 1), enable_events=True, visible=False)],
+            [sg.Text('', size=(12, 1), key='txt_tokenid', enable_events=True, visible=False), sg.InputText(key='token_id', size=(68, 1), enable_events=True, visible=False)],
+            
+            # TODO: generate random entropy
+            [sg.Text('Entropy input: ', size=(12, 1)), sg.InputText(key='entropy', size=(50, 1), enable_events=True), sg.Button('Generate randomly', key='generate_random')],
+            [sg.Text('Entropy output: ', size=(12, 1)), sg.Text(64*'0', key='entropy_out', size=(50, 1)), ],
+            #[sg.Text('Enter entropy as a 64-hex string: ', size=(40, 1)), sg.Button('Generate randomly', key='generate_random')],
+            #[sg.Text('Hex value: ', size=(12, 1)), sg.InputText(key='entropy', size=(68, 1))],
+            
+            #[sg.Checkbox('Use additional metadata', key='use_metadata', default=use_metadata, enable_events=True)], 
+            #[sg.Text('', size=(12, 1), key='metadata_prompt', visible=use_metadata), sg.InputText(key='metadata', visible=use_metadata)], 
+
+            [sg.Button('Seal', bind_return_key=True), sg.Cancel() ], 
+            [sg.Text('', size=(68,1), key='on_error', text_color='red')],
+        ] 
+        
+        window = sg.Window(f'SatodimeTool: seal keyslot # {str(key_nbr)}', layout, icon=self.satochip_icon) 
+        while True:                             
+            event, values = window.read() 
+            if event == None or event == 'Cancel':
+                break      
+            
+            elif event == 'Seal':    
+                try:
+                    #check entropy: entropy can be any UTF-8 sequence, if more than 32 bytes, it is sha256()
+                    entropy_str= values['entropy']
+                    entropy_bytes= entropy_str.encode("utf-8")
+                    if len(entropy_bytes)>32:
+                        entropy_bytes= hashlib.sha256(entropy_bytes).digest()
+                    entropy_hex= entropy_bytes.hex()
+                    entropy_hex= entropy_hex + (64-len(entropy_hex))*'0'
+                    values['entropy']= entropy_hex
+                    # check contract (hex value)
+                    contract= values['contract_address']
+                    if contract !='':
+                        int(contract, 16) # check if correct hex
+                        contract= contract[contract.startswith("0x") and len("0x"):] #strip '0x' if need be
+                        contract= contract[contract.startswith("0X") and len("0X"):] #strip '0x' if need be
+                        bytes.fromhex(contract) # hex must also contain even number of chars
+                        if len(contract) > 64: #TODO: check according to coin
+                            raise ValueError(f"Wrong contract length: {len(entropy)} (should be max 64 hex characters)") 
+                        values['contract_address']= contract
+                    # check tokenid (numeric value)
+                    token_id= values['token_id']
+                    if token_id != '':
+                        token_id_int= int(token_id, 10) # check if correct dec
+                        token_id_bytes= token_id_int.to_bytes(SIZE_TOKENID-2, 'big') # OverflowError thrown if too big
+                    # todo: check  data
+                    # metadata= values['metadata']
+                    # metadata_bytes= metadata.encode("utf-8")
+                    # if len(metadata_bytes)>(SIZE_DATA-2):
+                        # raise ValueError(f"Wrong metadata length: {len(metadata_bytes)} (should be maximum 64 bytes)")
+                    # if checks are ok, get out of loop
+                    break
+                except ValueError as ex: # wrong hex value
+                    window['on_error'].update(str(ex)) #update('Error: seed should be an hex string with the correct length!')
+            
+            elif event == 'list_slip44':
+                slip44= values['list_slip44']
+                if slip44 in LIST_SLIP44_TOKEN_SUPPORT:
+                    window['list_asset_type'].update(value='', values=LIST_ASSET_FULL)
+                else:
+                    window['list_asset_type'].update(value='', values=LIST_ASSET_LIMITED)
+                    window['contract_address'].update(visible=False)
+                    window['contract_address'].update('')
+                    window['token_id'].update(visible=False)
+                    window['token_id'].update('')
+                    window['txt_contract'].update(visible=False) 
+                    window['txt_tokenid'].update(visible=False) 
+            
+            elif event == 'list_asset_type':    
+                asset= values['list_asset_type']
+                if asset=='Coin':
+                    window['contract_address'].update(visible=False)
+                    window['contract_address'].update('')
+                    window['token_id'].update(visible=False)
+                    window['token_id'].update('')
+                    window['txt_contract'].update(visible=False) 
+                    window['txt_tokenid'].update(visible=False) 
+                else:
+                    window['txt_contract'].update('Contract address: ')
+                    window['txt_contract'].update(visible=True)
+                    window['contract_address'].update(visible=True)
+                if asset in ['NFT', 'ERC721', 'BEP721']: 
+                    window['txt_contract'].update('Contract address: ')
+                    window['txt_contract'].update(visible=True) 
+                    window['contract_address'].update(visible=True)
+                    window['txt_tokenid'].update('TokenID: ')
+                    window['txt_tokenid'].update(visible=True) 
+                    window['token_id'].update(visible=True)
+                if asset in ['Token', 'ERC20', 'BEP20']: 
+                    window['txt_contract'].update('Contract address: ')
+                    window['txt_contract'].update(visible=True) 
+                    window['contract_address'].update(visible=True)
+                    window['txt_tokenid'].update('')
+                    window['txt_tokenid'].update(visible=False) 
+                    window['token_id'].update(visible=False)
+                if asset in ['ERC20', 'ERC721']:
+                    window['list_slip44'].update(value='ETH')
+                if asset in ['BEP20', 'BEP721']: 
+                    window['list_slip44'].update(value='BSC')
+                
+            # elif event=='use_metadata':
+                # use_metadata= not use_metadata 
+                # window['metadata_prompt'].update('Enter metadata: ')
+                # window['metadata_prompt'].update(visible=use_metadata)
+                # window['metadata'].update(visible=use_metadata)
+                # if not use_metadata:
+                    # window['metadata'].update('')
+            
+            elif event=='generate_random':
+                entropy= urandom(32).hex()
+                window['entropy'].update(value= entropy)
+            
+            elif event=='entropy':
+                entropy_str= values['entropy']
+                entropy_bytes= entropy_str.encode("utf-8")
+                if len(entropy_bytes)>32:
+                    entropy_bytes= hashlib.sha256(entropy_bytes).digest()
+                entropy_hex= entropy_bytes.hex()
+                entropy_hex= entropy_hex + (64-len(entropy_hex))*'0'
+                window['entropy_out'].update(value= entropy_hex)
+            
+        window.close()
+        del window
+        
+        return event, values
+
+    def dialog_seal_old(self, key_nbr):
         
         #LIST_ASSET= ['Coin', 'Token', 'ERC20', 'BEP20', 'NFT', 'ERC721', 'BEP721'] #
         LIST_ASSET= ['Coin', 'Token', 'ERC20', 'NFT', 'ERC721'] #

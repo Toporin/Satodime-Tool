@@ -16,3 +16,5 @@ LIST_SLIP44_RAW = [
 LIST_SLIP44= [item[1] for item in LIST_SLIP44_RAW]
 DICT_SLIP44_BY_CODE= {item[0]: item[1] for item in LIST_SLIP44_RAW}
 DICT_SLIP44_BY_SYMBOL=  {item[1]: item[0] for item in LIST_SLIP44_RAW}
+
+LIST_SLIP44_TOKEN_SUPPORT= ['ETH', 'ETC', 'BSC']
