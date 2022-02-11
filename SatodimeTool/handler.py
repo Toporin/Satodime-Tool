@@ -6,6 +6,7 @@ import sys
 import os
 import logging
 import hashlib
+import requests
 from os import urandom
 
 from pysatochip.JCconstants import *  #JCconstants
@@ -933,16 +934,14 @@ class HandlerSimpleGUI:
             frame_key_info= [ [sg.Text('Status: ', size=(20, 1), background_color=color), sg.Text(key_status_txt, background_color=color)],
                                                 [sg.Text('Pubkey: ', size=(20, 1), background_color=color), sg.Text(pubkey_hex, background_color=color)],
                                                 [sg.Text('Address: ', size=(20, 1), background_color=color), sg.Text(address, background_color=color)],
-                                                ]
-            layout.append( [sg.Frame("Keyslot info", frame_key_info, background_color=color, key='frame_key_info')] )
+                                            ]
+            #layout.append( [sg.Frame("Keyslot info", frame_key_info, background_color=color, key='frame_key_info')] )
             
         elif key_status== STATE_SEALED or key_status== STATE_UNSEALED:
             
             # todo: get address
             coin_pubkey_hex= key_info['pubkey_comp_hex']
-            #logger.debug('PUBKEY:'+coin_pubkey_hex)
             coin_address= key_info['address'] #key_info['address_comp']  if key_info['use_address_comp'] else  key_info['address'] # for example eth use uncompressed addr
-            #logger.debug('ADDRESS:'+coin_address)
             use_segwit= key_info['use_segwit'] 
             #coin_address_segwit= key_info['address_comp_segwit']  if use_segwit else ""
             coin_address_legacy= key_info['address_legacy']  if use_segwit else ""
@@ -955,25 +954,23 @@ class HandlerSimpleGUI:
                 #coin_data+= f"\t[non-Segwit: {key_info['balance']}  & Saegwit: {key_info['balance_segwit']}]"
                 
             # coin info                
-            frame_key_info= [ [sg.Text('Status: ', size=(20, 1), background_color=color), sg.Text(key_status_txt, background_color=color)],
+            frame_key_info= [ 
+                                            [sg.Text('Status: ', size=(20, 1), background_color=color), sg.Text(key_status_txt, background_color=color)],
                                             [sg.Text('Pubkey: ', size=(20, 1), background_color=color), sg.Text(coin_pubkey_hex, background_color=color)],   
                                             [sg.Text('Asset type: ', size=(20, 1), background_color=color), sg.Text(key_asset_txt, background_color=color)],                                            
+                                            [sg.Text('Blockchain: ', size=(20, 1), background_color=color), sg.Text(f"{coin_name} ({key_slip44_hex})", background_color=color)],
+                                            #[sg.Text('Address: ', size=(20, 1),  enable_events=True, key='weburl1', background_color=color), sg.Multiline(coin_address, size=(64,1)), sg.Button('Show QR Code', key='show_qr_addr')] ,
+                                            [sg.Button('Address: ', key='weburl1'), sg.Multiline(coin_address, size=(64,1)), sg.Button('Show QR Code', key='show_qr_addr')] ,
+                                            #[sg.Text('Address segwit: ', size=(20, 1), background_color=color), sg.Multiline(coin_address_segwit, size=(64,1)), sg.Button('Show QR Code', key='show_qr_segwit') ] if use_segwit else [],
+                                            #[sg.Button('Address segwit: ', key='weburl2'), sg.Multiline(coin_address_segwit, size=(64,1)), sg.Button('Show QR Code', key='show_qr_segwit') ] if use_segwit else [], 
+                                            [sg.Button('Legacy (DO NOT USE!): ', key='weburl2'), sg.Multiline(coin_address_legacy + "-DONOTUSE!", size=(64,1)), sg.Button('Show QR Code', key='show_qr_legacy') ] if use_segwit else [], 
+                                            [sg.Text('Balance: ', size=(20, 1), background_color=color), sg.Text(coin_data, background_color=color)], 
+                                            # [sg.Text('Balance: ', size=(20, 1), background_color=color), sg.Text(coin_data, background_color=color), 
+                                                            # sg.Button("Explorer", key='weburl1'), sg.Button("Explorer", key='weburl2')] if use_segwit else 
+                                            # [sg.Text('Balance: ', size=(20, 1), background_color=color), sg.Text(coin_data, background_color=color), 
+                                                             # sg.Text("", key='weburl3', background_color=color), sg.Button("Explorer", key='weburl1')],         
                                         ]
-            layout.append( [sg.Frame("Keyslot info", frame_key_info, background_color=color, key='frame_key_info')] )
-            
-            frame_coin_info=[ [sg.Text('Blockchain: ', size=(20, 1), background_color=color), sg.Text(f"{coin_name} ({key_slip44_hex})", background_color=color)],
-                                                #[sg.Text('Address: ', size=(20, 1),  enable_events=True, key='weburl1', background_color=color), sg.Multiline(coin_address, size=(64,1)), sg.Button('Show QR Code', key='show_qr_addr')] ,
-                                                [sg.Button('Address: ', key='weburl1'), sg.Multiline(coin_address, size=(64,1)), sg.Button('Show QR Code', key='show_qr_addr')] ,
-                                                #[sg.Text('Address segwit: ', size=(20, 1), background_color=color), sg.Multiline(coin_address_segwit, size=(64,1)), sg.Button('Show QR Code', key='show_qr_segwit') ] if use_segwit else [],
-                                                #[sg.Button('Address segwit: ', key='weburl2'), sg.Multiline(coin_address_segwit, size=(64,1)), sg.Button('Show QR Code', key='show_qr_segwit') ] if use_segwit else [], 
-                                                [sg.Button('Legacy (DO NOT USE!): ', key='weburl2'), sg.Multiline(coin_address_legacy + "-DONOTUSE!", size=(64,1)), sg.Button('Show QR Code', key='show_qr_legacy') ] if use_segwit else [], 
-                                                [sg.Text('Balance: ', size=(20, 1), background_color=color), sg.Text(coin_data, background_color=color)], 
-                                                # [sg.Text('Balance: ', size=(20, 1), background_color=color), sg.Text(coin_data, background_color=color), 
-                                                                # sg.Button("Explorer", key='weburl1'), sg.Button("Explorer", key='weburl2')] if use_segwit else 
-                                                # [sg.Text('Balance: ', size=(20, 1), background_color=color), sg.Text(coin_data, background_color=color), 
-                                                                 # sg.Text("", key='weburl3', background_color=color), sg.Button("Explorer", key='weburl1')],         
-                                        ]
-            layout.append( [sg.Frame("Coin info", frame_coin_info, background_color=color, key='frame_coin_info')] )
+            #layout.append( [sg.Frame("Coin info", frame_coin_info, background_color=color, key='frame_coin_info')] )
             
             # token info if any
             if is_token:
@@ -985,20 +982,47 @@ class HandlerSimpleGUI:
                 frame_token_info= [ [sg.Text('Contract: ', size=(20, 1), background_color=color), sg.Multiline(key_contract_hex, size=(64,1)), sg.Button('Show QR Code', key='show_qr_contract')],
                                                         [sg.Text('Token balance: ', size=(20, 1), background_color=color), sg.Text(token_info, background_color=color)],
                                                     ]
-                layout.append( [sg.Frame("Token info", frame_token_info, background_color=color, key='frame_token_info')] )
+                #layout.append( [sg.Frame("Token info", frame_token_info, background_color=color, key='frame_token_info')] )
                 
             if is_nft:
                 key_contract_hex=  key_info['key_contract_hex']
-                key_tokenid_hex= key_info['key_tokenid_hex']
+                key_tokenid_int= key_info['key_tokenid_int']
                 token_balance= key_info['token_balance']
                 token_symbol= key_info['token_symbol']
                 token_name= key_info['token_name']
                 token_info= f"{token_balance} {token_name} ({token_symbol})"
-                frame_nft_info= [   [sg.Text('Contract: ', size=(20, 1), background_color=color), sg.Multiline(key_contract_hex, size=(64,1)), sg.Button('Show QR Code', key='show_qr_contract')],
-                                                    [sg.Text('Token ID: ', size=(20, 1), background_color=color), sg.Multiline(key_tokenid_hex, size=(64,1))],
-                                                    [sg.Text('NFT balance: ', size=(20, 1), background_color=color), sg.Text(token_info, background_color=color)],
+                
+                # Rarible info
+                nft_info= key_info['nft_info']
+                nft_name= nft_info.get('nft_name', '')
+                nft_description= nft_info.get('nft_description', '')
+                nft_image_url= nft_info.get('nft_image_url', '')
+                #nft_explorer_link= nft_info.get('nft_explorer_link', '')
+                # get image from url
+                nft_image_available= False
+                try:
+                    response = requests.get(nft_image_url,  stream=True)
+                    response.raw.decode_content = True
+                    if response.status_code == 200:
+                        nft_image_available= True
+                        nft_image_raw = response.raw.read()
+                except Exception as ex:
+                    logger.debug(f'Exception while fetching image from url: {nft_image_url}  Exception: {ex}')
+                    
+                frame_nft_info= [   
+                                            #[sg.Button('Contract: ', key='nft_owner_url'), sg.Multiline(key_contract_hex, size=(64,1)), sg.Button('Show QR Code', key='show_qr_contract')],
+                                            [sg.Text('Contract: ', size=(20, 1), background_color=color), sg.Multiline(key_contract_hex, size=(64,1)), sg.Button('Show QR Code', key='show_qr_contract')],
+                                            #[sg.Button('Token ID: ', key='nft_url'), sg.Multiline(key_tokenid_int, size=(64,1))],
+                                            #[sg.Text('Token ID: ', size=(20, 1), background_color=color), sg.Multiline(key_tokenid_int, size=(64,1))],
+                                            [sg.Text('Token ID: ', size=(20, 1), background_color=color), sg.Multiline(key_tokenid_int, size=(64,1)), sg.Button('Show NFT in explorer', key='nft_url')],
+                                            #[sg.Text('NFT balance: ', size=(20, 1), background_color=color), sg.Text(token_info, background_color=color)],
+                                            [sg.Text('NFT balance: ', size=(20, 1), background_color=color), sg.Text(token_info, background_color=color,  size=(64,1)), sg.Button('Show in explorer ', key='nft_owner_url')],
+                                            [sg.Text('NFT name: ', size=(20, 1), background_color=color), sg.Text(nft_name, background_color=color)],
+                                            [sg.Text('NFT description: ', size=(20, 1), background_color=color), sg.Text(nft_description, background_color=color), sg.Image(data=nft_image_raw, pad=(5,5))] if nft_image_available else
+                                                [sg.Text('NFT description: ', size=(20, 1), background_color=color), sg.Text(nft_description, background_color=color)]
+                                            #[sg.Image(data=nft_image_raw, pad=(5,5))] if nft_image_available else [],
                                         ]
-                layout.append( [sg.Frame("NFT info", frame_nft_info, background_color=color, key='frame_nft_info')] )
+                #layout.append( [sg.Frame("NFT info", frame_nft_info, background_color=color, key='frame_nft_info')] )
                 
             if key_status== STATE_UNSEALED: 
                 privkey_hex= key_info['privkey_hex']
@@ -1017,17 +1041,29 @@ class HandlerSimpleGUI:
                                                           [sg.Text('Entropy: ', size=(20, 1), background_color=color), sg.Multiline(entropy_hex, size=(64, 3))],
                                                           [sg.Text('                ', size=(20, 1), background_color=color), sg.Multiline(txt_entropy,  size=(64, 3), background_color=color)],
                                                         ]
-                layout.append( [sg.Frame("Private info", frame_private_info, background_color=color, key='frame_private_info')] )
+                #layout.append( [sg.Frame("Private info", frame_private_info, background_color=color, key='frame_private_info')] )
                 
         else: # should not happen!
             #status= "UNKNOWN!"
-            frame_error+= [ [sg.Text('Unexpected key status: ', size=(20, 1), background_color=color), sg.Text(key_status, background_color=color)]]
-            layout.append( [sg.Frame("Error!", frame_error, background_color=color, key='frame_error')] )
-            
+            frame_error= [ [sg.Text('Unexpected key status: ', size=(20, 1), background_color=color), sg.Text(key_status, background_color=color)]]
+            #layout.append( [sg.Frame("Error!", frame_error, background_color=color, key='frame_error')] )
+        
+        # tabs
+        tabs= [[ sg.Tab('Coin info', frame_key_info) ]]
+        if is_nft:
+            tabs= tabs+ [[sg.Tab('NFT info', frame_nft_info)]]
+        if is_token:
+            tabs= tabs+ [[sg.Tab('Token info', frame_token_info)]]
+        if key_status== STATE_UNSEALED:
+            tabs= tabs+ [[sg.Tab('Private info', frame_private_info)]]
+
+        tabgroup= [sg.TabGroup(tabs, tooltip='TIP2')]
+        layout.append(tabgroup)
+        
         # add menu
         layout.append( [sg.Button('Ok', disabled= False, key='ok')] )
         
-        window = sg.Window(f'SatodimeTool: details for keyslot # {str(key_nbr)}', layout, icon=self.satochip_icon)  
+        window = sg.Window(f'SatodimeTool: details for keyslot # {str(key_nbr)}', layout, icon=self.satochip_icon, background_color=color)  
         while True:
             event, values = window.read()      
             if event=='Ok' or event==None:
@@ -1051,6 +1087,12 @@ class HandlerSimpleGUI:
                 import webbrowser
                 #webbrowser.open(key_info['address_comp_segwit_weburl'])
                 webbrowser.open(key_info['address_legacy_weburl'])
+            elif event=='nft_url':
+                import webbrowser
+                webbrowser.open(key_info['nft_url'])
+            elif event=='nft_owner_url':
+                import webbrowser
+                webbrowser.open(key_info['nft_owner_url'])
             else:      
                 break     
         

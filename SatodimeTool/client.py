@@ -533,6 +533,24 @@ class Client:
                                     key_info['error']= str(ex)
                                     logger.debug(f'Exception while getting token info: {str(ex)}')
                                     
+                                if key_info['is_nft']: 
+                                    key_info['nft_info']= {}
+                                    key_info['nft_url']= ""
+                                    key_info['nft_owner_url']= ""
+                                    try:
+                                        tokenid_int= key_info['key_tokenid_int']
+                                        tokenid_str= str(tokenid_int)
+                                        nft_info= coin.get_nft_info(contract, tokenid_str)
+                                        #nft_info= coin.get_nft_info("0xb47e3cd837dDF8e4c57F05d70Ab865de6e193BBB", "999") # DEBUG
+                                        key_info['nft_info']= nft_info
+                                        logger.debug(f'NFT info: {nft_info}')
+                                        nft_addr_url= coin.get_nft_owner_weburl(addr) # explorer to ntf owner address (opensea)
+                                        key_info['nft_owner_url']= nft_addr_url
+                                        nft_url= coin.get_nft_weburl(contract, tokenid_str) # explorer to ntf token (opensea)
+                                        key_info['nft_url']= nft_url
+                                    except Exception as ex:
+                                        logger.debug(f'Exception while getting NFT info: {str(ex)}')
+                                        
                             #satodime_keys_info[key_nbr]= key_info
                         except Exception as ex:
                             (response, sw1, sw2, pubkey_list)= ([], 0x00, 0x00, [])
