@@ -276,8 +276,23 @@ class Client:
         card_info['is_error']= True
         card_info['error']= "No card found. Please insert card"
         return card_info
-        
     
+    def transfer_card(self):
+        (response, sw1, sw2)= self.cc.satodime_initiate_ownership_transfer()
+        if (sw1==0x90) and (sw2==0x00):
+            self.handler.show_notification('Information: ', "Transfer of card initiated successfully!")
+            # remove old unlock_secret from config file
+            try: 
+                config = ConfigParser()
+                config.read('satodime_tool.ini')
+                config.remove_section(self.authentikey_comp_hex)
+                with open('satodime_tool.ini', 'w') as f:
+                    config.write(f)
+            except Exception as e:
+                logger.warning("Exception while removing unlock_secret from config file:  "+ str(e))
+        else:
+            self.handler.show_error(f"Failed to transfer card ownership (error code {hex(256*sw1+sw2)})")
+        
     ####################################
     #                 SATODIME                         #      
     ####################################

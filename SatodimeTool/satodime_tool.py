@@ -49,10 +49,7 @@ while(True):
             logger.debug("Exception in  show_card_authenticity: "+ str(ex))
         
     elif event== 'transfer_card':
-        (response, sw1, sw2)= cc.satodime_initiate_ownership_transfer()
-        if (sw1==0x90) and (sw2==0x00):
-            handler.show_notification('Information: ', "Transfer of card initiated successfully!")
-        pass
+        client.transfer_card()
     
     elif event== 'refresh_card_info':
         client.card_event= True # force update of  variables storing state
