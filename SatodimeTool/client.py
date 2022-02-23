@@ -3,6 +3,7 @@ import logging
 import json
 import hashlib
 import sys
+import traceback
 from os import urandom, path, getcwd
 from configparser import ConfigParser  
 
@@ -11,7 +12,7 @@ from pysatochip.JCconstants import *
 from pysatochip.version import SATODIME_PROTOCOL_MAJOR_VERSION, SATODIME_PROTOCOL_MINOR_VERSION, SATODIME_PROTOCOL_VERSION
 
 #from cryptos import transaction, main #deserialize
-from pycryptotools.coins import Bitcoin, BitcoinCash, Litecoin, Doge, Dash, Ethereum, BinanceSmartChain, EthereumClassic, xDai, RSK
+from pycryptotools.coins import UnsupportedCoin, Bitcoin, BitcoinCash, Litecoin, Doge, Dash, Ethereum, BinanceSmartChain, EthereumClassic, xDai, RSK, Counterparty
 
 # print("DEBUG START client.py ")
 # print("DEBUG START client.py __name__: "+__name__)
@@ -37,6 +38,7 @@ DEBUG_CONTRACT={
     "ETH":"0xb47e3cd837ddf8e4c57f05d70ab865de6e193bbb", # cryptopunk
     "ETC":"0x6ada6f48c815689502c43ec1a59f1b5dd3c04e1f",# UniversalCoin
     "BSC":"0x2170ed0880ac9a755fd29b2688956bd959f933f8", # Binance-Peg Ethereum Token
+    "XCP":"PEPEPHOCKS.PEPEBOY", # counterparty
 }
        
        
@@ -316,6 +318,8 @@ class Client:
             coin= Doge(is_testnet, apikeys=apikeys) 
         elif key_slip44_hex== "80000005":
             coin= Dash(is_testnet, apikeys=apikeys) 
+        elif key_slip44_hex== "80000009":
+            coin= Counterparty(is_testnet, apikeys=apikeys) 
         elif key_slip44_hex== "8000003c":
             coin= Ethereum(is_testnet, apikeys=apikeys) 
         elif key_slip44_hex== "8000003d":
@@ -327,8 +331,7 @@ class Client:
         elif key_slip44_hex== "80000207":
             coin= BinanceSmartChain(is_testnet, apikeys=apikeys) # todo: convert to cashaddress?
         else:
-            coin= Bitcoin(True)  # use BTC testnet by default?
-            #raise Exception(f"Unsupported coin with slip44 code {key_slip44_hex}")        
+            coin= UnsupportedCoin(is_testnet, key_slip44_hex=key_slip44_hex)  
         return coin
     
     def get_balance(self, coin, addr):
@@ -532,12 +535,20 @@ class Client:
                                 try:
                                     if DEBUG: key_info['key_contract_hex']= DEBUG_CONTRACT[coin.coin_symbol] # TODO DEBUG API
                                     contract=key_info['key_contract_hex']
+                                    # counterparty uses another format
+                                    if (key_slip44_hex== "80000009"): 
+                                        key_contract_list= key_info['key_contract']
+                                        key_contract_length= key_contract_list[1]
+                                        key_contract_bytes= bytes( key_contract_list[2:2+key_contract_length] )
+                                        contract= key_contract_bytes.decode("utf-8")
+                                        key_info['key_contract_hex']= contract
+                                        
                                     token_balance= coin.balance_token(addr, contract)
                                     logger.debug(f'token_balance: {str(token_balance)}')# debug
                                     token_info= coin.get_token_info(addr, contract)
                                     token_decimals= int(token_info['decimals'] )
                                     logger.debug(f'token_info: {str(token_info)}')# debug
-                                    key_info['token_balance']= token_balance/(10**token_decimals)
+                                    key_info['token_balance']= token_balance/(10**token_decimals) # todo: do in coin.balance_token
                                     key_info['token_symbol']= token_info['symbol']
                                     key_info['token_name']= token_info['name']
                                 except Exception as ex:
@@ -546,7 +557,8 @@ class Client:
                                     key_info['token_name']= "unknown"
                                     key_info['is_error']= True
                                     key_info['error']= str(ex)
-                                    logger.debug(f'Exception while getting token info: {str(ex)}')
+                                    logger.warning(f'Exception while getting token info: {str(ex)}')
+                                    logger.warning(traceback.format_exc())
                                     
                                 if key_info['is_nft']: 
                                     key_info['nft_info']= {}
@@ -620,7 +632,8 @@ class Client:
             RFU2=0x00
             key_asset= values.get('list_asset_type', 'Coin')
             key_slip44= values.get('list_slip44', 'BTC') # coin symbol as defined in bip44
-            key_contract= values.get('contract_address', '') 
+            #key_contract= values.get('contract_address', '') 
+            key_contract_bytes= values.get('contract_address_bytes', b'') 
             key_tokenid= values.get('token_id', '') 
             key_data= values.get('metadata', '') 
             
@@ -631,11 +644,14 @@ class Client:
             if use_testnet:
                 key_slip44= (key_slip44 & 0x7FFFFFFF) # set  msb to 0
             key_slip44= list(key_slip44.to_bytes(4, 'big'))
-            if key_contract=='':
-                key_contract= SIZE_CONTRACT*[0x00]
-            else:
-                key_contract= list(bytes.fromhex(key_contract))
-                key_contract=[0, len(key_contract)] + key_contract + (SIZE_CONTRACT-2-len(key_contract))*[0x00]
+            # if key_contract_bytes==b'':
+                # key_contract= SIZE_CONTRACT*[0x00]
+            # else:
+                #key_contract= list(bytes.fromhex(key_contract))
+                # key_contract= list(key_contract_bytes)
+                # key_contract=[0, len(key_contract)] + key_contract + (SIZE_CONTRACT-2-len(key_contract))*[0x00]
+            key_contract= list(key_contract_bytes)
+            key_contract=[0, len(key_contract)] + key_contract + (SIZE_CONTRACT-2-len(key_contract))*[0x00]
             if key_tokenid=='':
                 key_tokenid= SIZE_TOKENID*[0x00]
             else:
