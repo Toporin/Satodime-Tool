@@ -20,5 +20,6 @@ pycryptotools>=0.2.0 # todo: add if not local
 # GUI
 PySimpleGUIQt==0.31.0
 PySide2== 5.12.6
+pillow == 8.4.0
 #PySide2== 5.14.0
 #PySide2== 5.14.2

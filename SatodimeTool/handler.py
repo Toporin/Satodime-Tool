@@ -1062,24 +1062,32 @@ class HandlerSimpleGUI:
                 nft_name= nft_info.get('nft_name', '')
                 nft_description= nft_info.get('nft_description', '')
                 nft_image_url=""
-                subsample_int=1
                 if "nft_image_large_url" in nft_info:
                     nft_image_url= nft_info.get('nft_image_large_url')
-                    subsample_int=3
                 elif "nft_image_url" in nft_info:
                     nft_image_url= nft_info.get('nft_image_url')
-                else:
-                    nft_image_url=""
                 # nft_image_url= nft_info.get('nft_image_url',"")
                 #nft_explorer_link= nft_info.get('nft_explorer_link', '')
                 # get image from url
                 nft_image_available= False
                 try:
-                    response = requests.get(nft_image_url,  stream=True)
-                    response.raw.decode_content = True
+                    # response = requests.get(nft_image_url,  stream=True)
+                    # response.raw.decode_content = True
+                    # if response.status_code == 200:
+                        # nft_image_available= True
+                        # nft_image_raw = response.raw.read()
+                    from PIL import Image
+                    from io import BytesIO
+                    size = (256, 256)
+                    response = requests.get(nft_image_url)
                     if response.status_code == 200:
+                        img = Image.open(BytesIO(response.content))
+                        img.thumbnail(size)
+                        #img.show() #debug open external viewer
+                        bio = BytesIO()
+                        img.save(bio, format="PNG")
+                        nft_image_raw= bio.getvalue()
                         nft_image_available= True
-                        nft_image_raw = response.raw.read()
                 except Exception as ex:
                     logger.debug(f'Exception while fetching image from url: {nft_image_url}  Exception: {ex}')
                     
