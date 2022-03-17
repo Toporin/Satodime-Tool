@@ -37,9 +37,7 @@ datas = [
 	(home+'seedkeeper/help/*.txt', '.'),
 ]
 
-# Hook for the mnemonic package: https://pypi.org/project/mnemonic/ and pysatochip
-#datas2= collect_data_files('mnemonic')
-datas+= collect_data_files('mnemonic')
+# Hook for the pysatochip package
 datas+= collect_data_files('pysatochip')
 print('Datas= '+repr(datas))
 
@@ -49,7 +47,6 @@ a = Analysis([
 			  home+'seedkeeper/client.py',
 			  home+'seedkeeper/handler.py',
 			  home+'seedkeeper/version.py'
-			  home+'seedkeeper/electrum_mnemonic.py'
               ],
              binaries=binaries,
              datas=datas,
