@@ -28,7 +28,7 @@ try:
 except Exception as e:
     print('handler.py importError: '+repr(e))
     from .version import SATODIMETOOL_VERSION
-    
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
@@ -624,6 +624,7 @@ class HandlerSimpleGUI:
                     entropy_hex= entropy_hex + (64-len(entropy_hex))*'0'
                     values['entropy']= entropy_hex
                     # check contract (hex value)
+                    slip44= values['list_slip44']
                     contract= values['contract_address']
                     contract_bytes= self.checkContractFieldToBytes(contract, slip44) # raise if ill-formatted
                     values['contract_address_bytes']= contract_bytes
