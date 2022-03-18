@@ -111,8 +111,14 @@ class Client:
         card_info['error']= 'No error'
         card_info['about']='card info are stored in this dict' # to do!
         while(self.cc.card_present):
-            (response, sw1, sw2, d)=self.cc.card_get_status()
-            
+            try:
+                (response, sw1, sw2, d)=self.cc.card_get_status()
+            except Exception as ex:
+                logger.warning(f"Exception during card_get_status: {ex}")
+                msg=(f"Error while getting card status. \nTry to remove and insert the card again.")
+                self.request('show_error', msg)
+                continue
+                
             # check version
             if (self.cc.card_type=='Satodime'):
                 card_info['card_status']= d
@@ -149,25 +155,33 @@ class Client:
                 create_pin_ACL= 0x01 # RFU
                 
                 #setup
-                (response, sw1, sw2)=self.cc.card_setup(pin_tries_0, ublk_tries_0, pin_0, ublk_0,
-                        pin_tries_1, ublk_tries_1, pin_1, ublk_1, 
-                        secmemsize, memsize, 
-                        create_object_ACL, create_key_ACL, create_pin_ACL)
-                if sw1==0x90 and sw2==0x00:       
-                    logger.info(f"Setup applet response: {response}")
-                    unlock_counter= response[0:SIZE_UNLOCK_COUNTER]
-                    unlock_secret= response[SIZE_UNLOCK_COUNTER:(SIZE_UNLOCK_COUNTER+SIZE_UNLOCK_SECRET)]
-                    card_info['is_owner']= True
-                    #self.cc.satodime_set_unlock_counter(unlock_counter)
-                    #self.cc.satodime_set_unlock_secret(unlock_secret)
-                else:
-                    msg= f"Unable to set up applet!  sw12={hex(sw1)} {hex(sw2)}"
+                try:
+                    (response, sw1, sw2)=self.cc.card_setup(pin_tries_0, ublk_tries_0, pin_0, ublk_0,
+                            pin_tries_1, ublk_tries_1, pin_1, ublk_1, 
+                            secmemsize, memsize, 
+                            create_object_ACL, create_key_ACL, create_pin_ACL)
+                    if sw1==0x90 and sw2==0x00:       
+                        logger.info(f"Setup applet response: {response}")
+                        unlock_counter= response[0:SIZE_UNLOCK_COUNTER]
+                        unlock_secret= response[SIZE_UNLOCK_COUNTER:(SIZE_UNLOCK_COUNTER+SIZE_UNLOCK_SECRET)]
+                        card_info['is_owner']= True
+                        #self.cc.satodime_set_unlock_counter(unlock_counter)
+                        #self.cc.satodime_set_unlock_secret(unlock_secret)
+                    else:
+                        msg= f"Unable to set up applet!  sw12={hex(sw1)} {hex(sw2)}"
+                        logger.warning(msg)
+                        self.request('show_error', msg)
+                        card_info['is_error']= True
+                        card_info['error']= msg
+                        return card_info
+                        #raise RuntimeError('Unable to setup the device with error code:'+hex(sw1)+' '+hex(sw2))
+                except Exception as ex:
+                    msg= f"Exception during card_setup:  {ex}. \nTry to remove and reinsert the card again."
                     logger.warning(msg)
                     self.request('show_error', msg)
                     card_info['is_error']= True
                     card_info['error']= msg
                     return card_info
-                    #raise RuntimeError('Unable to setup the device with error code:'+hex(sw1)+' '+hex(sw2))
                     
             # get authentikey TODO: only keep authentikey_comp_hex?
             try:
@@ -177,10 +191,11 @@ class Client:
                 card_info['authentikey_hex']= self.authentikey_hex
                 card_info['authentikey_comp_hex']= self.authentikey_comp_hex
             except Exception as ex:
-                logger.warning(repr(ex))
-                self.request('show_error', repr(ex))
+                msg= f"Exception during card_export_authentikey:  {ex}"
+                logger.warning(msg)
+                self.request('show_error', msg)
                 card_info['is_error']= True
-                card_info['error']= repr(ex)
+                card_info['error']= msg
                 return card_info
             
             #card label 
@@ -280,20 +295,24 @@ class Client:
         return card_info
     
     def transfer_card(self):
-        (response, sw1, sw2)= self.cc.satodime_initiate_ownership_transfer()
-        if (sw1==0x90) and (sw2==0x00):
-            self.handler.show_notification('Information: ', "Transfer of card initiated successfully!")
-            # remove old unlock_secret from config file
-            try: 
-                config = ConfigParser()
-                config.read('satodime_tool.ini')
-                config.remove_section(self.authentikey_comp_hex)
-                with open('satodime_tool.ini', 'w') as f:
-                    config.write(f)
-            except Exception as e:
-                logger.warning("Exception while removing unlock_secret from config file:  "+ str(e))
-        else:
-            self.handler.show_error(f"Failed to transfer card ownership (error code {hex(256*sw1+sw2)})")
+        try:
+            (response, sw1, sw2)= self.cc.satodime_initiate_ownership_transfer()
+            if (sw1==0x90) and (sw2==0x00):
+                self.handler.show_notification('Information: ', "Transfer of card initiated successfully!")
+                try: 
+                    # remove old unlock_secret from config file
+                    config = ConfigParser()
+                    config.read('satodime_tool.ini')
+                    config.remove_section(self.authentikey_comp_hex)
+                    with open('satodime_tool.ini', 'w') as f:
+                        config.write(f)
+                except Exception as e:
+                    logger.warning("Exception while removing unlock_secret from config file:  "+ str(e))
+            else:
+                self.handler.show_error(f"Failed to transfer card ownership (error code {hex(256*sw1+sw2)})")
+        except Exception as ex:
+            logger.warning(f"Exception during satodime_initiate_ownership_transfer: {ex}")
+        
         
     ####################################
     #                 SATODIME                         #      
@@ -435,7 +454,8 @@ class Client:
                 # get satodime status
                 try:
                     (response, sw1, sw2, satodime_status) = self.cc.satodime_get_status()
-                except CardNotPresentError:
+                except Exception as ex:
+                    logger.warning(f"Exception during satodime_get_status(): {ex}")
                     (response, sw1, sw2, satodime_status)= ([], 0x00, 0x00, {})
                     satodime_status= {'unlock_counter':[], 'max_num_keys':0, 'satodime_keys_status':[]}
                 
@@ -455,7 +475,8 @@ class Client:
                     # get keyslot status
                     try: 
                         (response, sw1, sw2, key_info) = self.cc.satodime_get_keyslot_status(key_nbr)        
-                    except CardNotPresentError:
+                    except Exception as ex:
+                        logger.warning(f"Exception during satodime_get_keyslot_status(): {ex}")
                         (response, sw1, sw2, key_info)= ([], 0x00, 0x00, {})
                     
                     # get pubkey
@@ -620,13 +641,18 @@ class Client:
             (event, values)= self.handler.dialog_seal(key_nbr)
             if event=='Cancel' or event==None:
                 return
-                
-            entropy_hex= values['entropy'] 
-            entropy= list(bytes.fromhex(entropy_hex))
-            self.card_event= True # force update of  variables storing state
-            self.card_event_slots= [key_nbr]
-            (response, sw1, sw2, pubkey_list, pubkey_comp_list)= self.cc.satodime_seal_key(key_nbr, entropy)
             
+            try:
+                entropy_hex= values['entropy'] 
+                entropy= list(bytes.fromhex(entropy_hex))
+                self.card_event= True # force update of  variables storing state
+                self.card_event_slots= [key_nbr]
+                (response, sw1, sw2, pubkey_list, pubkey_comp_list)= self.cc.satodime_seal_key(key_nbr, entropy)
+            except Exception as ex:
+                msg= f"Exception during satodime_seal_key: {ex}. Try to remove and insert card again."
+                logger.warning(msg)
+                self.request('show_message', msg)
+                
             # set metadata
             RFU1=0x00
             RFU2=0x00
@@ -659,15 +685,21 @@ class Client:
                 token_id_bytes= token_id_int.to_bytes(SIZE_TOKENID-2, 'big') # OverflowError thrown if too big
                 token_id_bytes= token_id_bytes.lstrip(b'\x00') # trim leading null bytes
                 key_tokenid=[0, len(token_id_bytes)] + list(token_id_bytes) +  (SIZE_TOKENID-2-len(token_id_bytes))*[0x00]
-            (response, sw1, sw2)= self.cc.satodime_set_keyslot_status_part0(key_nbr, RFU1, RFU2, key_asset, key_slip44, key_contract, key_tokenid)
+            try:
+                (response, sw1, sw2)= self.cc.satodime_set_keyslot_status_part0(key_nbr, RFU1, RFU2, key_asset, key_slip44, key_contract, key_tokenid)
+            except Exception as ex:
+                logger.warning(f"Exception during satodime_set_keyslot_status_part0: {ex}")
             
             if key_data=='':
                 key_data= SIZE_DATA*[0x00]
             else:
                 key_data=list(key_data.encode("utf-8"))
                 key_data= [0, len(key_data)] + key_data + (SIZE_DATA-2-len(key_data))*[0x00]
-            (response, sw1, sw2)= self.cc.satodime_set_keyslot_status_part1(key_nbr, key_data)
-            # TODO notification?
+            try:
+                (response, sw1, sw2)= self.cc.satodime_set_keyslot_status_part1(key_nbr, key_data)
+            except Exception as ex:
+                logger.warning(f"Exception during satodime_set_keyslot_status_part1: {ex}")
+                
             self.request('show_notification', "Success!", "Key sealed successfully!")
             return
             
@@ -685,7 +717,9 @@ class Client:
                     self.request('show_notification', "Success!", "Key unsealed successfully!")
                     #(event, values)= self.handler.dialog_show_unseal(key_nbr, entropy_list, privkey_list)
                 except Exception as ex:
-                    self.request('show_error', f"Exception during unseal for key {key_nbr}: {str(ex)}")
+                    msg= f"Exception during unseal for key {key_nbr}: {str(ex)}"
+                    logger.warning(msg)
+                    self.request('show_error', msg)
                 return
             else: # should not happen
                 return 
