@@ -5,7 +5,7 @@ pyscard==1.9.9 # from github repo
 #pyscard==2.0.0 # win wheels available on pypi for python 3.8-3.9
 cryptography==3.3.2 # higher versions require Rust 
 pysatochip==0.14.2 # todo: add if not local
-pycryptotools>=0.2.0 # todo: add if not local
+pycryptotools==0.2.1 # todo: add if not local
 
 # for pycryptotools =>  remove if not local
 #requests
@@ -20,5 +20,6 @@ pycryptotools>=0.2.0 # todo: add if not local
 # GUI
 PySimpleGUIQt==0.31.0
 PySide2== 5.12.6
+pillow == 8.4.0
 #PySide2== 5.14.0
 #PySide2== 5.14.2

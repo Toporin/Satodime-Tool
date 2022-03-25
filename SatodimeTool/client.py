@@ -3,6 +3,7 @@ import logging
 import json
 import hashlib
 import sys
+import traceback
 from os import urandom, path, getcwd
 from configparser import ConfigParser  
 
@@ -11,7 +12,7 @@ from pysatochip.JCconstants import *
 from pysatochip.version import SATODIME_PROTOCOL_MAJOR_VERSION, SATODIME_PROTOCOL_MINOR_VERSION, SATODIME_PROTOCOL_VERSION
 
 #from cryptos import transaction, main #deserialize
-from pycryptotools.coins import Bitcoin, BitcoinCash, Litecoin, Doge, Dash, Ethereum, BinanceSmartChain, EthereumClassic, xDai, RSK
+from pycryptotools.coins import UnsupportedCoin, Bitcoin, BitcoinCash, Litecoin, Doge, Dash, Ethereum, BinanceSmartChain, EthereumClassic, xDai, RSK, Counterparty
 
 # print("DEBUG START client.py ")
 # print("DEBUG START client.py __name__: "+__name__)
@@ -37,6 +38,7 @@ DEBUG_CONTRACT={
     "ETH":"0xb47e3cd837ddf8e4c57f05d70ab865de6e193bbb", # cryptopunk
     "ETC":"0x6ada6f48c815689502c43ec1a59f1b5dd3c04e1f",# UniversalCoin
     "BSC":"0x2170ed0880ac9a755fd29b2688956bd959f933f8", # Binance-Peg Ethereum Token
+    "XCP":"PEPEPHOCKS.PEPEBOY", # counterparty
 }
        
        
@@ -109,8 +111,14 @@ class Client:
         card_info['error']= 'No error'
         card_info['about']='card info are stored in this dict' # to do!
         while(self.cc.card_present):
-            (response, sw1, sw2, d)=self.cc.card_get_status()
-            
+            try:
+                (response, sw1, sw2, d)=self.cc.card_get_status()
+            except Exception as ex:
+                logger.warning(f"Exception during card_get_status: {ex}")
+                msg=(f"Error while getting card status. \nTry to remove and insert the card again.")
+                self.request('show_error', msg)
+                continue
+                
             # check version
             if (self.cc.card_type=='Satodime'):
                 card_info['card_status']= d
@@ -147,25 +155,33 @@ class Client:
                 create_pin_ACL= 0x01 # RFU
                 
                 #setup
-                (response, sw1, sw2)=self.cc.card_setup(pin_tries_0, ublk_tries_0, pin_0, ublk_0,
-                        pin_tries_1, ublk_tries_1, pin_1, ublk_1, 
-                        secmemsize, memsize, 
-                        create_object_ACL, create_key_ACL, create_pin_ACL)
-                if sw1==0x90 and sw2==0x00:       
-                    logger.info(f"Setup applet response: {response}")
-                    unlock_counter= response[0:SIZE_UNLOCK_COUNTER]
-                    unlock_secret= response[SIZE_UNLOCK_COUNTER:(SIZE_UNLOCK_COUNTER+SIZE_UNLOCK_SECRET)]
-                    card_info['is_owner']= True
-                    #self.cc.satodime_set_unlock_counter(unlock_counter)
-                    #self.cc.satodime_set_unlock_secret(unlock_secret)
-                else:
-                    msg= f"Unable to set up applet!  sw12={hex(sw1)} {hex(sw2)}"
+                try:
+                    (response, sw1, sw2)=self.cc.card_setup(pin_tries_0, ublk_tries_0, pin_0, ublk_0,
+                            pin_tries_1, ublk_tries_1, pin_1, ublk_1, 
+                            secmemsize, memsize, 
+                            create_object_ACL, create_key_ACL, create_pin_ACL)
+                    if sw1==0x90 and sw2==0x00:       
+                        logger.info(f"Setup applet response: {response}")
+                        unlock_counter= response[0:SIZE_UNLOCK_COUNTER]
+                        unlock_secret= response[SIZE_UNLOCK_COUNTER:(SIZE_UNLOCK_COUNTER+SIZE_UNLOCK_SECRET)]
+                        card_info['is_owner']= True
+                        #self.cc.satodime_set_unlock_counter(unlock_counter)
+                        #self.cc.satodime_set_unlock_secret(unlock_secret)
+                    else:
+                        msg= f"Unable to set up applet!  sw12={hex(sw1)} {hex(sw2)}"
+                        logger.warning(msg)
+                        self.request('show_error', msg)
+                        card_info['is_error']= True
+                        card_info['error']= msg
+                        return card_info
+                        #raise RuntimeError('Unable to setup the device with error code:'+hex(sw1)+' '+hex(sw2))
+                except Exception as ex:
+                    msg= f"Exception during card_setup:  {ex}. \nTry to remove and reinsert the card again."
                     logger.warning(msg)
                     self.request('show_error', msg)
                     card_info['is_error']= True
                     card_info['error']= msg
                     return card_info
-                    #raise RuntimeError('Unable to setup the device with error code:'+hex(sw1)+' '+hex(sw2))
                     
             # get authentikey TODO: only keep authentikey_comp_hex?
             try:
@@ -175,10 +191,11 @@ class Client:
                 card_info['authentikey_hex']= self.authentikey_hex
                 card_info['authentikey_comp_hex']= self.authentikey_comp_hex
             except Exception as ex:
-                logger.warning(repr(ex))
-                self.request('show_error', repr(ex))
+                msg= f"Exception during card_export_authentikey:  {ex}"
+                logger.warning(msg)
+                self.request('show_error', msg)
                 card_info['is_error']= True
-                card_info['error']= repr(ex)
+                card_info['error']= msg
                 return card_info
             
             #card label 
@@ -278,20 +295,24 @@ class Client:
         return card_info
     
     def transfer_card(self):
-        (response, sw1, sw2)= self.cc.satodime_initiate_ownership_transfer()
-        if (sw1==0x90) and (sw2==0x00):
-            self.handler.show_notification('Information: ', "Transfer of card initiated successfully!")
-            # remove old unlock_secret from config file
-            try: 
-                config = ConfigParser()
-                config.read('satodime_tool.ini')
-                config.remove_section(self.authentikey_comp_hex)
-                with open('satodime_tool.ini', 'w') as f:
-                    config.write(f)
-            except Exception as e:
-                logger.warning("Exception while removing unlock_secret from config file:  "+ str(e))
-        else:
-            self.handler.show_error(f"Failed to transfer card ownership (error code {hex(256*sw1+sw2)})")
+        try:
+            (response, sw1, sw2)= self.cc.satodime_initiate_ownership_transfer()
+            if (sw1==0x90) and (sw2==0x00):
+                self.handler.show_notification('Information: ', "Transfer of card initiated successfully!")
+                try: 
+                    # remove old unlock_secret from config file
+                    config = ConfigParser()
+                    config.read('satodime_tool.ini')
+                    config.remove_section(self.authentikey_comp_hex)
+                    with open('satodime_tool.ini', 'w') as f:
+                        config.write(f)
+                except Exception as e:
+                    logger.warning("Exception while removing unlock_secret from config file:  "+ str(e))
+            else:
+                self.handler.show_error(f"Failed to transfer card ownership (error code {hex(256*sw1+sw2)})")
+        except Exception as ex:
+            logger.warning(f"Exception during satodime_initiate_ownership_transfer: {ex}")
+        
         
     ####################################
     #                 SATODIME                         #      
@@ -316,6 +337,8 @@ class Client:
             coin= Doge(is_testnet, apikeys=apikeys) 
         elif key_slip44_hex== "80000005":
             coin= Dash(is_testnet, apikeys=apikeys) 
+        elif key_slip44_hex== "80000009":
+            coin= Counterparty(is_testnet, apikeys=apikeys) 
         elif key_slip44_hex== "8000003c":
             coin= Ethereum(is_testnet, apikeys=apikeys) 
         elif key_slip44_hex== "8000003d":
@@ -327,8 +350,7 @@ class Client:
         elif key_slip44_hex== "80000207":
             coin= BinanceSmartChain(is_testnet, apikeys=apikeys) # todo: convert to cashaddress?
         else:
-            coin= Bitcoin(True)  # use BTC testnet by default?
-            #raise Exception(f"Unsupported coin with slip44 code {key_slip44_hex}")        
+            coin= UnsupportedCoin(is_testnet, key_slip44_hex=key_slip44_hex)  
         return coin
     
     def get_balance(self, coin, addr):
@@ -432,7 +454,8 @@ class Client:
                 # get satodime status
                 try:
                     (response, sw1, sw2, satodime_status) = self.cc.satodime_get_status()
-                except CardNotPresentError:
+                except Exception as ex:
+                    logger.warning(f"Exception during satodime_get_status(): {ex}")
                     (response, sw1, sw2, satodime_status)= ([], 0x00, 0x00, {})
                     satodime_status= {'unlock_counter':[], 'max_num_keys':0, 'satodime_keys_status':[]}
                 
@@ -452,7 +475,8 @@ class Client:
                     # get keyslot status
                     try: 
                         (response, sw1, sw2, key_info) = self.cc.satodime_get_keyslot_status(key_nbr)        
-                    except CardNotPresentError:
+                    except Exception as ex:
+                        logger.warning(f"Exception during satodime_get_keyslot_status(): {ex}")
                         (response, sw1, sw2, key_info)= ([], 0x00, 0x00, {})
                     
                     # get pubkey
@@ -532,12 +556,20 @@ class Client:
                                 try:
                                     if DEBUG: key_info['key_contract_hex']= DEBUG_CONTRACT[coin.coin_symbol] # TODO DEBUG API
                                     contract=key_info['key_contract_hex']
+                                    # counterparty uses another format
+                                    if (key_slip44_hex== "80000009"): 
+                                        key_contract_list= key_info['key_contract']
+                                        key_contract_length= key_contract_list[1]
+                                        key_contract_bytes= bytes( key_contract_list[2:2+key_contract_length] )
+                                        contract= key_contract_bytes.decode("utf-8")
+                                        key_info['key_contract_hex']= contract
+                                        
                                     token_balance= coin.balance_token(addr, contract)
                                     logger.debug(f'token_balance: {str(token_balance)}')# debug
                                     token_info= coin.get_token_info(addr, contract)
                                     token_decimals= int(token_info['decimals'] )
                                     logger.debug(f'token_info: {str(token_info)}')# debug
-                                    key_info['token_balance']= token_balance/(10**token_decimals)
+                                    key_info['token_balance']= token_balance/(10**token_decimals) # todo: do in coin.balance_token
                                     key_info['token_symbol']= token_info['symbol']
                                     key_info['token_name']= token_info['name']
                                 except Exception as ex:
@@ -546,7 +578,8 @@ class Client:
                                     key_info['token_name']= "unknown"
                                     key_info['is_error']= True
                                     key_info['error']= str(ex)
-                                    logger.debug(f'Exception while getting token info: {str(ex)}')
+                                    logger.warning(f'Exception while getting token info: {str(ex)}')
+                                    logger.warning(traceback.format_exc())
                                     
                                 if key_info['is_nft']: 
                                     key_info['nft_info']= {}
@@ -608,19 +641,25 @@ class Client:
             (event, values)= self.handler.dialog_seal(key_nbr)
             if event=='Cancel' or event==None:
                 return
-                
-            entropy_hex= values['entropy'] 
-            entropy= list(bytes.fromhex(entropy_hex))
-            self.card_event= True # force update of  variables storing state
-            self.card_event_slots= [key_nbr]
-            (response, sw1, sw2, pubkey_list, pubkey_comp_list)= self.cc.satodime_seal_key(key_nbr, entropy)
             
+            try:
+                entropy_hex= values['entropy'] 
+                entropy= list(bytes.fromhex(entropy_hex))
+                self.card_event= True # force update of  variables storing state
+                self.card_event_slots= [key_nbr]
+                (response, sw1, sw2, pubkey_list, pubkey_comp_list)= self.cc.satodime_seal_key(key_nbr, entropy)
+            except Exception as ex:
+                msg= f"Exception during satodime_seal_key: {ex}. Try to remove and insert card again."
+                logger.warning(msg)
+                self.request('show_message', msg)
+                
             # set metadata
             RFU1=0x00
             RFU2=0x00
             key_asset= values.get('list_asset_type', 'Coin')
             key_slip44= values.get('list_slip44', 'BTC') # coin symbol as defined in bip44
-            key_contract= values.get('contract_address', '') 
+            #key_contract= values.get('contract_address', '') 
+            key_contract_bytes= values.get('contract_address_bytes', b'') 
             key_tokenid= values.get('token_id', '') 
             key_data= values.get('metadata', '') 
             
@@ -631,11 +670,14 @@ class Client:
             if use_testnet:
                 key_slip44= (key_slip44 & 0x7FFFFFFF) # set  msb to 0
             key_slip44= list(key_slip44.to_bytes(4, 'big'))
-            if key_contract=='':
-                key_contract= SIZE_CONTRACT*[0x00]
-            else:
-                key_contract= list(bytes.fromhex(key_contract))
-                key_contract=[0, len(key_contract)] + key_contract + (SIZE_CONTRACT-2-len(key_contract))*[0x00]
+            # if key_contract_bytes==b'':
+                # key_contract= SIZE_CONTRACT*[0x00]
+            # else:
+                #key_contract= list(bytes.fromhex(key_contract))
+                # key_contract= list(key_contract_bytes)
+                # key_contract=[0, len(key_contract)] + key_contract + (SIZE_CONTRACT-2-len(key_contract))*[0x00]
+            key_contract= list(key_contract_bytes)
+            key_contract=[0, len(key_contract)] + key_contract + (SIZE_CONTRACT-2-len(key_contract))*[0x00]
             if key_tokenid=='':
                 key_tokenid= SIZE_TOKENID*[0x00]
             else:
@@ -643,15 +685,21 @@ class Client:
                 token_id_bytes= token_id_int.to_bytes(SIZE_TOKENID-2, 'big') # OverflowError thrown if too big
                 token_id_bytes= token_id_bytes.lstrip(b'\x00') # trim leading null bytes
                 key_tokenid=[0, len(token_id_bytes)] + list(token_id_bytes) +  (SIZE_TOKENID-2-len(token_id_bytes))*[0x00]
-            (response, sw1, sw2)= self.cc.satodime_set_keyslot_status_part0(key_nbr, RFU1, RFU2, key_asset, key_slip44, key_contract, key_tokenid)
+            try:
+                (response, sw1, sw2)= self.cc.satodime_set_keyslot_status_part0(key_nbr, RFU1, RFU2, key_asset, key_slip44, key_contract, key_tokenid)
+            except Exception as ex:
+                logger.warning(f"Exception during satodime_set_keyslot_status_part0: {ex}")
             
             if key_data=='':
                 key_data= SIZE_DATA*[0x00]
             else:
                 key_data=list(key_data.encode("utf-8"))
                 key_data= [0, len(key_data)] + key_data + (SIZE_DATA-2-len(key_data))*[0x00]
-            (response, sw1, sw2)= self.cc.satodime_set_keyslot_status_part1(key_nbr, key_data)
-            # TODO notification?
+            try:
+                (response, sw1, sw2)= self.cc.satodime_set_keyslot_status_part1(key_nbr, key_data)
+            except Exception as ex:
+                logger.warning(f"Exception during satodime_set_keyslot_status_part1: {ex}")
+                
             self.request('show_notification', "Success!", "Key sealed successfully!")
             return
             
@@ -669,7 +717,9 @@ class Client:
                     self.request('show_notification', "Success!", "Key unsealed successfully!")
                     #(event, values)= self.handler.dialog_show_unseal(key_nbr, entropy_list, privkey_list)
                 except Exception as ex:
-                    self.request('show_error', f"Exception during unseal for key {key_nbr}: {str(ex)}")
+                    msg= f"Exception during unseal for key {key_nbr}: {str(ex)}"
+                    logger.warning(msg)
+                    self.request('show_error', msg)
                 return
             else: # should not happen
                 return 

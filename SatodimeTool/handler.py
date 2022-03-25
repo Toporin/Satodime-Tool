@@ -7,6 +7,7 @@ import os
 import logging
 import hashlib
 import requests
+import re
 from os import urandom
 
 from pysatochip.JCconstants import *  #JCconstants
@@ -27,7 +28,7 @@ try:
 except Exception as e:
     print('handler.py importError: '+repr(e))
     from .version import SATODIMETOOL_VERSION
-    
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
@@ -580,6 +581,7 @@ class HandlerSimpleGUI:
     def dialog_seal(self, key_nbr):
         
         LIST_ASSET_LIMITED= ['Coin'] 
+        LIST_ASSET_PARTIAL= ['Coin', 'Token'] 
         LIST_ASSET_FULL= ['Coin', 'Token', 'NFT'] 
         use_metadata=False
         layout = [
@@ -622,15 +624,19 @@ class HandlerSimpleGUI:
                     entropy_hex= entropy_hex + (64-len(entropy_hex))*'0'
                     values['entropy']= entropy_hex
                     # check contract (hex value)
+                    slip44= values['list_slip44']
                     contract= values['contract_address']
-                    if contract !='':
-                        int(contract, 16) # check if correct hex
-                        contract= contract[contract.startswith("0x") and len("0x"):] #strip '0x' if need be
-                        contract= contract[contract.startswith("0X") and len("0X"):] #strip '0x' if need be
-                        bytes.fromhex(contract) # hex must also contain even number of chars
-                        if len(contract) > 64: #TODO: check according to coin
-                            raise ValueError(f"Wrong contract length: {len(entropy)} (should be max 64 hex characters)") 
-                        values['contract_address']= contract
+                    contract_bytes= self.checkContractFieldToBytes(contract, slip44) # raise if ill-formatted
+                    values['contract_address_bytes']= contract_bytes
+                    # if contract !='':
+                        # int(contract, 16) # check if correct hex
+                        # contract= contract[contract.startswith("0x") and len("0x"):] #strip '0x' if need be
+                        # contract= contract[contract.startswith("0X") and len("0X"):] #strip '0x' if need be
+                        # bytes.fromhex(contract) # hex must also contain even number of chars
+                        # if len(contract) > 64: #TODO: check according to coin
+                            # raise ValueError(f"Wrong contract length: {len(entropy)} (should be max 64 hex characters)") 
+                        # values['contract_address']= contract
+                    
                     # check tokenid (numeric value)
                     token_id= values['token_id']
                     if token_id != '':
@@ -650,6 +656,12 @@ class HandlerSimpleGUI:
                 slip44= values['list_slip44']
                 if slip44 in LIST_SLIP44_TOKEN_SUPPORT:
                     window['list_asset_type'].update(value='', values=LIST_ASSET_FULL)
+                elif slip44=='XCP':
+                    window['list_asset_type'].update(value='', values=LIST_ASSET_PARTIAL)
+                    window['token_id'].update(visible=False)
+                    window['token_id'].update('')
+                    window['txt_tokenid'].update(visible=False) 
+                    window['txt_contract'].update("Asset name: ") 
                 else:
                     window['list_asset_type'].update(value='', values=LIST_ASSET_LIMITED)
                     window['contract_address'].update(visible=False)
@@ -716,7 +728,61 @@ class HandlerSimpleGUI:
         del window
         
         return event, values
-
+    
+    def checkContractFieldToBytes(self, contract, slip44):
+        if contract =='':
+            return b''
+    
+        if slip44 in ['ETH', 'ETC', 'BSC']:
+            int(contract, 16) # check if correct hex
+            contract= contract[contract.startswith("0x") and len("0x"):] #strip '0x' if need be
+            contract= contract[contract.startswith("0X") and len("0X"):] #strip '0x' if need be
+            bytes.fromhex(contract) # hex must also contain even number of chars
+            if len(contract) > 40:
+                raise ValueError(f"Wrong contract length: {len(contract)} (should be 40 hex characters)") 
+            contract_bytes= bytes.fromhex(contract)
+            return contract_bytes
+        
+        elif slip44=='XCP':
+            # https://counterparty.io/docs/protocol_specification/
+            asset=contract
+            subasset=""
+            check= re.match('(?!\.)(?!.*\.$)(?!.*?\.\.)', asset); # contract cannot start, end with '.' or contains consecutive dots # https://stackoverflow.com/questions/40718851/regex-that-does-not-allow-consecutive-dots
+            if check is None:
+                raise ValueError(f"Wrong asset format: {asset} (asset cannot start or end with dot or contain consecutive dots)") 
+            if "." in asset: # contains subasset
+                splited= asset.split(".", maxsplit=1)
+                asset= splited[0]
+                subasset= splited[1]
+                minlength=str(1)
+                maxlength= str(250- len(asset) -1)
+                pattern= "^[a-zA-Z0-9.-_@!]{" + minlength + "," + maxlength + "}$"
+                check= re.match(pattern, subasset)
+                if check is None:
+                    raise ValueError(f"Wrong subasset format: {subasset} (check for length and unauthorized characters)") 
+            if asset.startswith('A'): # numeric asset
+                nbr_str= contract.removeprefix("A")
+                try:
+                    nbr= int(nbr_str)
+                    if nbr<(26**12+1) or nbr>(256**8):
+                         raise ValueError(f"Wrong numeric asset format: {asset} (numeric value outside of bounds)") 
+                except Exception as ex:
+                    raise ValueError(f"Wrong numeric asset format: {asset} (asset should start with 'A' followed by numeric value)") 
+            else:  # named asset
+                check= re.match('^[A-Z]{4,12}$', asset)
+                if check is None:
+                    raise ValueError(f"Wrong named asset format: {asset} (should be 4-12 uppercase Latin characters)") 
+            contract_bytes= contract.encode("utf-8")
+            if (len(contract_bytes)>32):
+                raise ValueError(f"Unfortunately, Satodime supports only asset name smaller than 32 bytes") 
+                #todo: use token_id and metadata as additionnal space
+            return contract_bytes
+            
+        else:
+            raise ValueError(f"Unsupported blockchain: {slip44}") 
+            
+    
+    
     def dialog_seal_old(self, key_nbr):
         
         #LIST_ASSET= ['Coin', 'Token', 'ERC20', 'BEP20', 'NFT', 'ERC721', 'BEP721'] #
@@ -996,16 +1062,33 @@ class HandlerSimpleGUI:
                 nft_info= key_info['nft_info']
                 nft_name= nft_info.get('nft_name', '')
                 nft_description= nft_info.get('nft_description', '')
-                nft_image_url= nft_info.get('nft_image_url', '')
+                nft_image_url=""
+                if "nft_image_large_url" in nft_info:
+                    nft_image_url= nft_info.get('nft_image_large_url')
+                elif "nft_image_url" in nft_info:
+                    nft_image_url= nft_info.get('nft_image_url')
+                # nft_image_url= nft_info.get('nft_image_url',"")
                 #nft_explorer_link= nft_info.get('nft_explorer_link', '')
                 # get image from url
                 nft_image_available= False
                 try:
-                    response = requests.get(nft_image_url,  stream=True)
-                    response.raw.decode_content = True
+                    # response = requests.get(nft_image_url,  stream=True)
+                    # response.raw.decode_content = True
+                    # if response.status_code == 200:
+                        # nft_image_available= True
+                        # nft_image_raw = response.raw.read()
+                    from PIL import Image
+                    from io import BytesIO
+                    size = (256, 256)
+                    response = requests.get(nft_image_url)
                     if response.status_code == 200:
+                        img = Image.open(BytesIO(response.content))
+                        img.thumbnail(size)
+                        #img.show() #debug open external viewer
+                        bio = BytesIO()
+                        img.save(bio, format="PNG")
+                        nft_image_raw= bio.getvalue()
                         nft_image_available= True
-                        nft_image_raw = response.raw.read()
                 except Exception as ex:
                     logger.debug(f'Exception while fetching image from url: {nft_image_url}  Exception: {ex}')
                     
