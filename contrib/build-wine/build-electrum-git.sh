@@ -42,7 +42,7 @@ pushd $WINEPREFIX/drive_c/electrum
 info "Pip installing SatodimeTool. This might take a long time if the project folder is large."
 $PYTHON -m pip install --no-warn-script-location .
 #$PYTHON -m pip install --no-warn-script-location /pypackage # to install pysatochip package from local folder
-$PYTHON -m pip install --no-warn-script-location /pypackage2 # to install pybitcointools package from local folder
+#$PYTHON -m pip install --no-warn-script-location /pypackage2 # to install pybitcointools package from local folder
 popd
 
 rm -rf dist/
