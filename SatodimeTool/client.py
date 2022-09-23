@@ -1,11 +1,16 @@
-import PySimpleGUIQt as sg 
 import logging
 import json
 import hashlib
 import sys
 import traceback
 from os import urandom, path, getcwd
-from configparser import ConfigParser  
+from configparser import ConfigParser 
+#import PySimpleGUIQt as sg  
+if sys.platform == "darwin": #MacOS
+    import PySimpleGUI as sg
+else:
+    import PySimpleGUIQt as sg
+
 
 from pysatochip.CardConnector import CardConnector, UninitializedSeedError, SeedKeeperError, UnexpectedSW12Error, CardError, CardNotPresentError
 from pysatochip.JCconstants import *
@@ -76,7 +81,11 @@ class Client:
         self.apikeys={}
         if getattr( sys, 'frozen', False ):
             # running in a bundle
-            self.pkg_dir= sys._MEIPASS # for pyinstaller
+            #self.pkg_dir= sys._MEIPASS # for pyinstaller
+            if sys.platform == "darwin": #MacOS
+                self.pkg_dir= sys._MEIPASS + "/SatodimeTool" # for pyinstaller
+            else:
+                self.pkg_dir= sys._MEIPASS # for pyinstaller
         else :
             # running live
             self.pkg_dir = path.split(path.realpath(__file__))[0]

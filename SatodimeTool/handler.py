@@ -1,14 +1,17 @@
-import PySimpleGUIQt as sg 
 import base64 
 import json
 import getpass
-import sys
 import os
+import sys
 import logging
 import hashlib
 import requests
 import re
-from os import urandom
+#import PySimpleGUIQt as sg 
+if sys.platform == "darwin": #MacOS
+    import PySimpleGUI as sg
+else:
+    import PySimpleGUIQt as sg
 
 from pysatochip.JCconstants import *  #JCconstants
 from pysatochip.CardConnector import CardConnector
@@ -83,7 +86,11 @@ class HandlerSimpleGUI:
         #self.pkg_dir = os.path.split(os.path.realpath(__file__))[0] # does not work with packaged .exe 
         if getattr( sys, 'frozen', False ):
             # running in a bundle
-            self.pkg_dir= sys._MEIPASS # for pyinstaller
+            #self.pkg_dir= sys._MEIPASS # for pyinstaller
+            if sys.platform == "darwin": #MacOS
+                self.pkg_dir= sys._MEIPASS + "/SatodimeTool" # for pyinstaller
+            else:
+                self.pkg_dir= sys._MEIPASS # for pyinstaller
         else :
             # running live
             self.pkg_dir = os.path.split(os.path.realpath(__file__))[0]
@@ -91,7 +98,11 @@ class HandlerSimpleGUI:
         self.satochip_icon= self.icon_path("satochip.png") #"satochip.png"
         self.satochip_unpaired_icon= self.icon_path("satochip_unpaired.png") #"satochip_unpaired.png"
         
-        self.tray = sg.SystemTray(filename=self.satochip_icon) 
+        #self.tray = sg.SystemTray(filename=self.satochip_icon) 
+        if sys.platform == "darwin": #MacOS
+            self.tray= None # system tray is not well supported on MacOS
+        else:
+            self.tray = sg.SystemTray(filename=self.satochip_icon) 
          
          
     def icon_path(self, icon_basename):
@@ -111,7 +122,11 @@ class HandlerSimpleGUI:
         sg.popup('Notification', msg, icon=self.satochip_icon)
     def show_notification(self, title, msg):
         #logger.debug("START show_notification")
-        self.tray.ShowMessage(title, msg, time=100000)
+        #self.tray.ShowMessage(title, msg, time=100000)
+        if sys.platform == "darwin": #MacOS
+            self.show_message(msg);  # toast message is not well supported on MacOS
+        else:
+            self.tray.ShowMessage(title, msg, time=100000)
         
     def approve_action(self, question):
         logger.debug('In approve_action')
@@ -441,7 +456,7 @@ class HandlerSimpleGUI:
         
         languages=['English', 'Français']
         layout = [
-            [sg.Text('Select language: ', size=(15, 1)), sg.InputCombo(languages, key='lang', size=(25, 1), enable_events=True)],
+            [sg.Text('Select language: ', size=(15, 1)), sg.InputCombo(languages, key='lang', size=(25, 1), default_value='English', enable_events=True)],
             [sg.Multiline(help_txt, key='help_txt', size=(60,20), visible=True)],
             [sg.Button('Ok')]
         ]
@@ -712,7 +727,7 @@ class HandlerSimpleGUI:
                     # window['metadata'].update('')
             
             elif event=='generate_random':
-                entropy= urandom(32).hex()
+                entropy= os.urandom(32).hex()
                 window['entropy'].update(value= entropy)
             
             elif event=='entropy':
@@ -892,7 +907,7 @@ class HandlerSimpleGUI:
                     window['metadata'].update('')
             
             elif event=='generate_random':
-                entropy= urandom(32).hex()
+                entropy= os.urandom(32).hex()
                 window['entropy'].update(value= entropy)
                 
         window.close()

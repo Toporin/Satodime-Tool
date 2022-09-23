@@ -1,0 +1,8 @@
+pip
+setuptools
+wheel
+
+# needed by pyinstaller:
+macholib>=1.8
+altgraph
+pyinstaller-hooks-contrib>=2020.6

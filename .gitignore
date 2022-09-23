@@ -1,10 +1,9 @@
-SatodimeTool/__pycache__/
-SatodimeTool/api_keys.ini
-SatodimeTool.egg-info/
-__pycache__/
+.DS_Store
 *.pyc
-dist/
+satodime_tool.ini
+__pycache__/
 build/
+dist/
 contrib/build-linux/appimage/build/
 contrib/build-linux/appimage/.cache/
 contrib/build-wine/.cache/
@@ -12,4 +11,8 @@ contrib/build-wine/dist/
 contrib/build-wine/build/
 contrib/build-wine/fresh_clone/
 #contrib/build-wine/*.spec
-satodime_tool.ini
+contrib/osx/.cache/
+contrib/osx/build-venv/
+SatodimeTool/__pycache__/
+SatodimeTool/api_keys.ini
+SatodimeTool.egg-info/
