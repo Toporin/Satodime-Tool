@@ -3,7 +3,7 @@ pypng==0.0.20
 ecdsa==0.15
 pyscard==1.9.9 # from github repo
 #pyscard==2.0.0 # win wheels available on pypi for python 3.8-3.9
-cryptography==3.3.2 # higher versions require Rust 
+cryptography==39.0.1 # higher versions require Rust 
 pysatochip==0.14.2 # todo: add if not local
 pycryptotools==0.2.1 # todo: add if not local
 
